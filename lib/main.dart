@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'screens/NordenIntroPage.dart'; // Import the intro page file
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'screens/home_page.dart';
+import 'screens/NordenIntroPage.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const NordenApp());
 }
 
@@ -15,18 +20,107 @@ class NordenApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Norden',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        primaryColor: const Color(0xFF1A1A2E),
-        scaffoldBackgroundColor: const Color(0xFF16213E),
-        textTheme: GoogleFonts.interTextTheme(),
+        primarySwatch: MaterialColor(0xFFD4AF37, {
+          50: Color(0xFFFDF8E1),
+          100: Color(0xFFF9EBB3),
+          200: Color(0xFFF5DD81),
+          300: Color(0xFFF1CF4F),
+          400: Color(0xFFEEC12D),
+          500: Color(0xFFD4AF37),
+          600: Color(0xFFB8860B),
+          700: Color(0xFF9C6B00),
+          800: Color(0xFF805000),
+          900: Color(0xFF643500),
+        }),
+        primaryColor: const Color(0xFF1B263B),
+        scaffoldBackgroundColor: const Color(0xFF0A0E1A),
+        textTheme: GoogleFonts.playfairDisplayTextTheme().copyWith(
+          bodyLarge: GoogleFonts.inter(),
+          bodyMedium: GoogleFonts.inter(),
+          displayLarge: GoogleFonts.playfairDisplay(),
+          displayMedium: GoogleFonts.playfairDisplay(),
+          displaySmall: GoogleFonts.playfairDisplay(),
+          headlineLarge: GoogleFonts.playfairDisplay(),
+          headlineMedium: GoogleFonts.playfairDisplay(),
+          headlineSmall: GoogleFonts.playfairDisplay(),
+        ),
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF0F3460),
-          secondary: Color(0xFFE94560),
-          surface: Color(0xFF16213E),
-          background: Color(0xFF0F0F23),
+          primary: Color(0xFFD4AF37),
+          secondary: Color(0xFFB8860B),
+          surface: Color(0xFF1B263B),
+          background: Color(0xFF0A0E1A),
+          onPrimary: Color(0xFF0A0E1A),
+          onSecondary: Color(0xFF0A0E1A),
+          onSurface: Color(0xFFB8D4E8),
+          onBackground: Color(0xFFB8D4E8),
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          titleTextStyle: GoogleFonts.playfairDisplay(
+            color: const Color(0xFFD4AF37),
+            fontSize: 24,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFD4AF37),
+            foregroundColor: const Color(0xFF0A0E1A),
+            textStyle: GoogleFonts.inter(
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.2,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        cardTheme: CardThemeData(
+          color: const Color(0xFF1B263B).withOpacity(0.6),
+          elevation: 8,
+          shadowColor: const Color(0xFFD4AF37).withOpacity(0.1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: const Color(0xFFD4AF37).withOpacity(0.15),
+              width: 1,
+            ),
+          ),
         ),
       ),
-      home: const NordenIntroPage(), // Start with intro page
+      home: const AuthWrapper(), // Check auth state on startup
+    );
+  }
+}
+
+/// Wrapper to check authentication state and navigate accordingly
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // Show loading while checking auth state
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: Color(0xFF0A0A0A),
+            body: Center(
+              child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+            ),
+          );
+        }
+
+        // If user is logged in, go to home page
+        if (snapshot.hasData && snapshot.data != null) {
+          return const NordenHomePage();
+        }
+
+        // If user is not logged in, show intro page
+        return const NordenIntroPage();
+      },
     );
   }
 }

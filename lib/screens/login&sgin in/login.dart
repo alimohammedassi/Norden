@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'signup.dart';
 import 'forgot_password.dart';
 import '../home_page.dart';
+import '../admin/admin_dashboard.dart';
+import '../NordenIntroPage.dart';
+import '../../services/auth_service.dart';
+import '../../config/admin_config.dart';
 
 class NordenLoginPage extends StatefulWidget {
-  const NordenLoginPage({Key? key}) : super(key: key);
+  const NordenLoginPage({super.key});
 
   @override
   State<NordenLoginPage> createState() => _NordenLoginPageState();
@@ -21,8 +26,10 @@ class _NordenLoginPageState extends State<NordenLoginPage>
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -56,16 +63,17 @@ class _NordenLoginPageState extends State<NordenLoginPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0A),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF000000),
-              Color(0xFF0A0E1A),
-              Color(0xFF0D1B2A),
-              Color(0xFF1B263B),
+              Color(0xFF0A0A0A),
+              Color(0xFF141414),
+              Color(0xFF1A1A1A),
+              Color(0xFF0F0F0F),
             ],
             stops: [0.0, 0.3, 0.7, 1.0],
           ),
@@ -73,9 +81,12 @@ class _NordenLoginPageState extends State<NordenLoginPage>
         child: Container(
           decoration: BoxDecoration(
             gradient: RadialGradient(
-              center: Alignment.topRight,
-              radius: 1.5,
-              colors: [Color(0xFF1E3A5F).withOpacity(0.2), Colors.transparent],
+              center: Alignment.topCenter,
+              radius: 1.2,
+              colors: [
+                const Color(0xFFD4AF37).withOpacity(0.05),
+                Colors.transparent,
+              ],
             ),
           ),
           child: SafeArea(
@@ -90,11 +101,19 @@ class _NordenLoginPageState extends State<NordenLoginPage>
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: IconButton(
-                        icon: Icon(
-                          Icons.arrow_back_ios,
-                          color: Color(0xFFB8D4E8),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Color(0xFFD4AF37),
                         ),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          // Navigate back to intro page
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NordenIntroPage(),
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -105,27 +124,31 @@ class _NordenLoginPageState extends State<NordenLoginPage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           ShaderMask(
-                            shaderCallback: (bounds) => LinearGradient(
-                              colors: [Color(0xFFFFFFFF), Color(0xFF5E9FD8)],
+                            shaderCallback: (bounds) => const LinearGradient(
+                              colors: [
+                                Color(0xFFD4AF37),
+                                Color(0xFFFFF8DC),
+                                Color(0xFFD4AF37),
+                              ],
                             ).createShader(bounds),
                             child: Text(
                               'Welcome\nBack',
                               style: GoogleFonts.playfairDisplay(
-                                fontSize: 42,
-                                fontWeight: FontWeight.w300,
+                                fontSize: 46,
+                                fontWeight: FontWeight.w400,
                                 color: Colors.white,
-                                height: 1.2,
+                                height: 1.1,
                                 letterSpacing: 2,
                               ),
                             ),
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'Sign in to continue',
+                            'Sign in to continue your journey',
                             style: GoogleFonts.inter(
-                              fontSize: 16,
-                              color: Color(0xFF8BA8C5),
-                              fontWeight: FontWeight.w300,
+                              fontSize: 15,
+                              color: const Color(0xFFD4AF37).withOpacity(0.7),
+                              fontWeight: FontWeight.w400,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -211,21 +234,21 @@ class _NordenLoginPageState extends State<NordenLoginPage>
                                             });
                                           },
                                           fillColor:
-                                              MaterialStateProperty.resolveWith(
-                                                (states) {
-                                                  if (states.contains(
-                                                    MaterialState.selected,
-                                                  )) {
-                                                    return Color(0xFF5E9FD8);
-                                                  }
-                                                  return Color(
-                                                    0xFF2E5C8A,
-                                                  ).withOpacity(0.3);
-                                                },
-                                              ),
+                                              WidgetStateProperty.resolveWith((
+                                                states,
+                                              ) {
+                                                if (states.contains(
+                                                  WidgetState.selected,
+                                                )) {
+                                                  return const Color(
+                                                    0xFFD4AF37,
+                                                  );
+                                                }
+                                                return const Color(0xFF1A1A1A);
+                                              }),
                                           side: BorderSide(
-                                            color: Color(
-                                              0xFF4A7BA7,
+                                            color: const Color(
+                                              0xFFD4AF37,
                                             ).withOpacity(0.4),
                                           ),
                                         ),
@@ -234,7 +257,9 @@ class _NordenLoginPageState extends State<NordenLoginPage>
                                       Text(
                                         'Remember me',
                                         style: GoogleFonts.inter(
-                                          color: Color(0xFFB8D4E8),
+                                          color: const Color(
+                                            0xFFD4AF37,
+                                          ).withOpacity(0.8),
                                           fontSize: 14,
                                         ),
                                       ),
@@ -253,9 +278,9 @@ class _NordenLoginPageState extends State<NordenLoginPage>
                                     child: Text(
                                       'Forgot Password?',
                                       style: GoogleFonts.inter(
-                                        color: Color(0xFF5E9FD8),
+                                        color: const Color(0xFFD4AF37),
                                         fontSize: 14,
-                                        fontWeight: FontWeight.w500,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
@@ -263,50 +288,62 @@ class _NordenLoginPageState extends State<NordenLoginPage>
                               ),
                               const SizedBox(height: 40),
                               // Login button
-                              Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(30),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Color(0xFF5E9FD8).withOpacity(0.4),
-                                      blurRadius: 20,
-                                      spreadRadius: 2,
-                                      offset: Offset(0, 8),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 60,
+                                child: ElevatedButton(
+                                  onPressed: _isLoading
+                                      ? null
+                                      : _signInWithEmail,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30),
                                     ),
-                                  ],
-                                ),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  height: 58,
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      if (_formKey.currentState!.validate()) {
-                                        HapticFeedback.lightImpact();
-                                        // Navigate directly to home page
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const NordenHomePage(),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Color(0xFF5E9FD8),
-                                      foregroundColor: Color(0xFF0A0E1A),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(30),
+                                    padding: EdgeInsets.zero,
+                                    disabledBackgroundColor: Colors.transparent,
+                                  ),
+                                  child: Ink(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: _isLoading
+                                            ? [
+                                                const Color(
+                                                  0xFFD4AF37,
+                                                ).withOpacity(0.5),
+                                                const Color(
+                                                  0xFFB8860B,
+                                                ).withOpacity(0.5),
+                                              ]
+                                            : [
+                                                const Color(0xFFD4AF37),
+                                                const Color(0xFFB8860B),
+                                              ],
                                       ),
-                                      elevation: 0,
+                                      borderRadius: BorderRadius.circular(30),
                                     ),
-                                    child: Text(
-                                      'SIGN IN',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: 2.5,
-                                      ),
+                                    child: Container(
+                                      alignment: Alignment.center,
+                                      child: _isLoading
+                                          ? const SizedBox(
+                                              width: 24,
+                                              height: 24,
+                                              child: CircularProgressIndicator(
+                                                color: Colors.black,
+                                                strokeWidth: 3,
+                                              ),
+                                            )
+                                          : Text(
+                                              'SIGN IN',
+                                              style:
+                                                  GoogleFonts.playfairDisplay(
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.w700,
+                                                    letterSpacing: 3,
+                                                    color: Colors.black,
+                                                  ),
+                                            ),
                                     ),
                                   ),
                                 ),
@@ -318,7 +355,9 @@ class _NordenLoginPageState extends State<NordenLoginPage>
                                   Expanded(
                                     child: Container(
                                       height: 1,
-                                      color: Color(0xFF2E5C8A).withOpacity(0.3),
+                                      color: const Color(
+                                        0xFFD4AF37,
+                                      ).withOpacity(0.2),
                                     ),
                                   ),
                                   Padding(
@@ -328,16 +367,21 @@ class _NordenLoginPageState extends State<NordenLoginPage>
                                     child: Text(
                                       'OR',
                                       style: GoogleFonts.inter(
-                                        color: Color(0xFF8BA8C5),
+                                        color: const Color(
+                                          0xFFD4AF37,
+                                        ).withOpacity(0.5),
                                         fontSize: 12,
-                                        letterSpacing: 1,
+                                        letterSpacing: 2,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
                                   Expanded(
                                     child: Container(
                                       height: 1,
-                                      color: Color(0xFF2E5C8A).withOpacity(0.3),
+                                      color: const Color(
+                                        0xFFD4AF37,
+                                      ).withOpacity(0.2),
                                     ),
                                   ),
                                 ],
@@ -350,9 +394,9 @@ class _NordenLoginPageState extends State<NordenLoginPage>
                                     child: _buildSocialButton(
                                       icon: Icons.g_mobiledata,
                                       label: 'Google',
-                                      onPressed: () {
-                                        // Handle Google login
-                                      },
+                                      onPressed: _isLoading
+                                          ? null
+                                          : _signInWithGoogle,
                                     ),
                                   ),
                                   const SizedBox(width: 16),
@@ -360,9 +404,23 @@ class _NordenLoginPageState extends State<NordenLoginPage>
                                     child: _buildSocialButton(
                                       icon: Icons.apple,
                                       label: 'Apple',
-                                      onPressed: () {
-                                        // Handle Apple login
-                                      },
+                                      onPressed: _isLoading
+                                          ? null
+                                          : () {
+                                              // Handle Apple login
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: const Text(
+                                                    'Apple Sign In coming soon',
+                                                  ),
+                                                  backgroundColor: const Color(
+                                                    0xFFD4AF37,
+                                                  ),
+                                                ),
+                                              );
+                                            },
                                     ),
                                   ),
                                 ],
@@ -375,7 +433,7 @@ class _NordenLoginPageState extends State<NordenLoginPage>
                                   Text(
                                     "Don't have an account? ",
                                     style: GoogleFonts.inter(
-                                      color: Color(0xFF8BA8C5),
+                                      color: Colors.white.withOpacity(0.6),
                                       fontSize: 14,
                                     ),
                                   ),
@@ -391,16 +449,16 @@ class _NordenLoginPageState extends State<NordenLoginPage>
                                     },
                                     style: TextButton.styleFrom(
                                       padding: EdgeInsets.zero,
-                                      minimumSize: Size(0, 0),
+                                      minimumSize: const Size(0, 0),
                                       tapTargetSize:
                                           MaterialTapTargetSize.shrinkWrap,
                                     ),
                                     child: Text(
                                       'Sign Up',
                                       style: GoogleFonts.inter(
-                                        color: Color(0xFF5E9FD8),
+                                        color: const Color(0xFFD4AF37),
                                         fontSize: 14,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                   ),
@@ -437,9 +495,9 @@ class _NordenLoginPageState extends State<NordenLoginPage>
         Text(
           label,
           style: GoogleFonts.inter(
-            color: Color(0xFFB8D4E8),
+            color: const Color(0xFFD4AF37).withOpacity(0.9),
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
           ),
         ),
@@ -449,9 +507,9 @@ class _NordenLoginPageState extends State<NordenLoginPage>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Color(0xFF000000).withOpacity(0.3),
-                blurRadius: 10,
-                offset: Offset(0, 4),
+                color: Colors.black.withOpacity(0.4),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
@@ -464,42 +522,48 @@ class _NordenLoginPageState extends State<NordenLoginPage>
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.inter(
-                color: Color(0xFF8BA8C5).withOpacity(0.5),
+                color: Colors.white.withOpacity(0.3),
                 fontSize: 14,
               ),
-              prefixIcon: Icon(icon, color: Color(0xFF5E9FD8), size: 22),
+              prefixIcon: Icon(icon, color: const Color(0xFFD4AF37), size: 22),
               suffixIcon: suffixIcon,
               filled: true,
-              fillColor: Color(0xFF1B263B).withOpacity(0.6),
+              fillColor: const Color(0xFF1A1A1A).withOpacity(0.8),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
-                  color: Color(0xFF2E5C8A).withOpacity(0.3),
+                  color: const Color(0xFFD4AF37).withOpacity(0.2),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
-                  color: Color(0xFF2E5C8A).withOpacity(0.3),
+                  color: const Color(0xFFD4AF37).withOpacity(0.2),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Color(0xFF5E9FD8), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFD4AF37),
+                  width: 2,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Color(0xFFE94560)),
+                borderSide: const BorderSide(color: Color(0xFFFF3B30)),
               ),
               focusedErrorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Color(0xFFE94560), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFFF3B30),
+                  width: 2,
+                ),
               ),
               errorStyle: GoogleFonts.inter(
-                color: Color(0xFFE94560),
+                color: const Color(0xFFFF3B30),
                 fontSize: 12,
               ),
-              contentPadding: EdgeInsets.symmetric(
+              contentPadding: const EdgeInsets.symmetric(
                 horizontal: 20,
                 vertical: 18,
               ),
@@ -513,14 +577,21 @@ class _NordenLoginPageState extends State<NordenLoginPage>
   Widget _buildSocialButton({
     required IconData icon,
     required String label,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) {
     return Container(
-      height: 52,
+      height: 54,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Color(0xFF2E5C8A).withOpacity(0.3)),
-        color: Color(0xFF1B263B).withOpacity(0.4),
+        border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.3)),
+        color: const Color(0xFF1A1A1A).withOpacity(0.6),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -530,14 +601,14 @@ class _NordenLoginPageState extends State<NordenLoginPage>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: Color(0xFFB8D4E8), size: 24),
+              Icon(icon, color: const Color(0xFFD4AF37), size: 26),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: GoogleFonts.inter(
-                  color: Color(0xFFB8D4E8),
+                  color: const Color(0xFFD4AF37).withOpacity(0.9),
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -545,5 +616,106 @@ class _NordenLoginPageState extends State<NordenLoginPage>
         ),
       ),
     );
+  }
+
+  /// Sign in with email and password using Firebase Auth
+  Future<void> _signInWithEmail() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    HapticFeedback.mediumImpact();
+
+    try {
+      await _authService.signInWithEmail(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+
+      if (mounted) {
+        // Check if user is admin
+        final isAdmin = AdminConfig.isAdmin(_emailController.text);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                isAdmin ? const AdminDashboard() : const NordenHomePage(),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_authService.getErrorMessage(e)),
+            backgroundColor: const Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred. Please try again'),
+            backgroundColor: Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  /// Sign in with Google using Firebase Auth
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+    HapticFeedback.mediumImpact();
+
+    try {
+      final userCredential = await _authService.signInWithGoogle();
+
+      if (userCredential != null && mounted) {
+        // Check if user is admin
+        final isAdmin = AdminConfig.isAdmin(userCredential.user?.email);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                isAdmin ? const AdminDashboard() : const NordenHomePage(),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_authService.getErrorMessage(e)),
+            backgroundColor: const Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred with Google Sign In'),
+            backgroundColor: Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 }

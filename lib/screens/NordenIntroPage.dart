@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'login&sgin in/login.dart';
+import 'home_page.dart';
+import '../services/auth_service.dart';
 
 // This is your separate intro page - import this into your main.dart
 class NordenIntroPage extends StatefulWidget {
@@ -15,6 +18,8 @@ class _NordenIntroPageState extends State<NordenIntroPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+  final AuthService _authService = AuthService();
+  bool _isLoadingGuest = false;
 
   @override
   void initState() {
@@ -32,6 +37,39 @@ class _NordenIntroPageState extends State<NordenIntroPage>
     _controller.forward();
   }
 
+  /// Sign in as guest (anonymous)
+  Future<void> _continueAsGuest() async {
+    setState(() => _isLoadingGuest = true);
+    HapticFeedback.mediumImpact();
+
+    try {
+      await _authService.signInAnonymously();
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const NordenHomePage()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _authService.getErrorMessage(e),
+              style: GoogleFonts.inter(color: Colors.white),
+            ),
+            backgroundColor: const Color(0xFFFF3B30),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingGuest = false);
+      }
+    }
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -41,16 +79,17 @@ class _NordenIntroPageState extends State<NordenIntroPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0A),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF000000), // Pure black
-              Color(0xFF0A0E1A), // Very dark navy
-              Color(0xFF0D1B2A), // Dark blue-black
-              Color(0xFF1B263B), // Deep navy
+              Color(0xFF0A0A0A),
+              Color(0xFF141414),
+              Color(0xFF1A1A1A),
+              Color(0xFF0F0F0F),
             ],
             stops: [0.0, 0.3, 0.7, 1.0],
           ),
@@ -58,9 +97,12 @@ class _NordenIntroPageState extends State<NordenIntroPage>
         child: Container(
           decoration: BoxDecoration(
             gradient: RadialGradient(
-              center: Alignment.topRight,
-              radius: 1.5,
-              colors: [Color(0xFF1E3A5F).withOpacity(0.2), Colors.transparent],
+              center: Alignment.topCenter,
+              radius: 1.2,
+              colors: [
+                const Color(0xFFD4AF37).withOpacity(0.05),
+                Colors.transparent,
+              ],
             ),
           ),
           child: SafeArea(
@@ -74,59 +116,71 @@ class _NordenIntroPageState extends State<NordenIntroPage>
                     opacity: _fadeAnimation,
                     child: Column(
                       children: [
-                        // Elegant snowflake icon
+                        // Elegant diamond icon
                         Container(
-                          padding: const EdgeInsets.all(28),
+                          padding: const EdgeInsets.all(32),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                Color(0xFF2E5C8A).withOpacity(0.3),
-                                Color(0xFF1E3A5F).withOpacity(0.2),
+                                const Color(0xFFD4AF37).withOpacity(0.15),
+                                const Color(0xFFB8860B).withOpacity(0.1),
                               ],
                             ),
                             border: Border.all(
-                              color: Color(0xFF4A7BA7).withOpacity(0.4),
+                              color: const Color(0xFFD4AF37).withOpacity(0.3),
                               width: 2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Color(0xFF2E5C8A).withOpacity(0.3),
-                                blurRadius: 30,
+                                color: const Color(0xFFD4AF37).withOpacity(0.2),
+                                blurRadius: 40,
                                 spreadRadius: 5,
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.5),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
                               ),
                             ],
                           ),
-                          child: Icon(
-                            Icons.ac_unit_rounded,
-                            size: 70,
-                            color: Color(0xFF5E9FD8),
+                          child: const Icon(
+                            Icons.diamond_outlined,
+                            size: 80,
+                            color: Color(0xFFD4AF37),
                           ),
                         ),
                         const SizedBox(height: 50),
                         // App name with elegant styling
                         ShaderMask(
-                          shaderCallback: (bounds) => LinearGradient(
+                          shaderCallback: (bounds) => const LinearGradient(
                             colors: [
-                              Color(0xFFFFFFFF),
-                              Color(0xFFB8D4E8),
-                              Color(0xFF5E9FD8),
+                              Color(0xFFD4AF37),
+                              Color(0xFFFFF8DC),
+                              Color(0xFFD4AF37),
                             ],
                           ).createShader(bounds),
                           child: Text(
                             'NORDEN',
                             style: GoogleFonts.playfairDisplay(
-                              fontSize: 52,
-                              fontWeight: FontWeight.w300,
+                              fontSize: 56,
+                              fontWeight: FontWeight.w400,
                               color: Colors.white,
-                              letterSpacing: 16,
+                              letterSpacing: 18,
                               shadows: [
                                 Shadow(
-                                  color: Color(0xFF2E5C8A),
-                                  offset: Offset(0, 3),
-                                  blurRadius: 12,
+                                  color: Colors.black.withOpacity(0.5),
+                                  offset: const Offset(0, 4),
+                                  blurRadius: 15,
+                                ),
+                                Shadow(
+                                  color: const Color(
+                                    0xFFD4AF37,
+                                  ).withOpacity(0.3),
+                                  offset: const Offset(0, 2),
+                                  blurRadius: 8,
                                 ),
                               ],
                             ),
@@ -135,34 +189,34 @@ class _NordenIntroPageState extends State<NordenIntroPage>
                         const SizedBox(height: 20),
                         // Decorative line
                         Container(
-                          height: 1.5,
-                          width: 120,
+                          height: 2,
+                          width: 140,
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
+                            gradient: const LinearGradient(
                               colors: [
                                 Colors.transparent,
-                                Color(0xFF5E9FD8),
-                                Color(0xFF4A7BA7),
-                                Color(0xFF5E9FD8),
+                                Color(0xFFD4AF37),
+                                Color(0xFFFFF8DC),
+                                Color(0xFFD4AF37),
                                 Colors.transparent,
                               ],
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Color(0xFF5E9FD8).withOpacity(0.5),
-                                blurRadius: 10,
+                                color: const Color(0xFFD4AF37).withOpacity(0.4),
+                                blurRadius: 12,
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'Premium Winter Collection',
+                          'MAISON DE COUTURE',
                           style: GoogleFonts.inter(
-                            fontSize: 15,
-                            color: Color(0xFFB8D4E8),
-                            letterSpacing: 4,
-                            fontWeight: FontWeight.w300,
+                            fontSize: 14,
+                            color: const Color(0xFFD4AF37).withOpacity(0.8),
+                            letterSpacing: 5,
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
                       ],
@@ -183,19 +237,24 @@ class _NordenIntroPageState extends State<NordenIntroPage>
                             borderRadius: BorderRadius.circular(30),
                             boxShadow: [
                               BoxShadow(
-                                color: Color(0xFF5E9FD8).withOpacity(0.4),
-                                blurRadius: 20,
+                                color: const Color(0xFFD4AF37).withOpacity(0.4),
+                                blurRadius: 30,
                                 spreadRadius: 2,
-                                offset: Offset(0, 8),
+                                offset: const Offset(0, 10),
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 5),
                               ),
                             ],
                           ),
                           child: SizedBox(
                             width: double.infinity,
-                            height: 58,
+                            height: 60,
                             child: ElevatedButton(
                               onPressed: () {
-                                HapticFeedback.lightImpact();
+                                HapticFeedback.mediumImpact();
                                 // Navigate to login page
                                 Navigator.pushReplacement(
                                   context,
@@ -206,22 +265,90 @@ class _NordenIntroPageState extends State<NordenIntroPage>
                                 );
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF5E9FD8),
-                                foregroundColor: Color(0xFF0A0E1A),
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(30),
                                 ),
-                                elevation: 0,
+                                padding: EdgeInsets.zero,
                               ),
-                              child: Text(
-                                'EXPLORE COLLECTION',
-                                style: GoogleFonts.inter(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 2.5,
+                              child: Ink(
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFFD4AF37),
+                                      Color(0xFFB8860B),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                child: Container(
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    'ENTER NORDEN',
+                                    style: GoogleFonts.playfairDisplay(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 3,
+                                      color: Colors.black,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Continue as Guest button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 60,
+                          child: OutlinedButton(
+                            onPressed: _isLoadingGuest
+                                ? null
+                                : _continueAsGuest,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFD4AF37),
+                              side: BorderSide(
+                                color: const Color(0xFFD4AF37).withOpacity(0.5),
+                                width: 2,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              backgroundColor: const Color(
+                                0xFF1A1A1A,
+                              ).withOpacity(0.3),
+                            ),
+                            child: _isLoadingGuest
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Color(0xFFD4AF37),
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.person_outline,
+                                        size: 20,
+                                        color: Color(0xFFD4AF37),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'CONTINUE AS GUEST',
+                                        style: GoogleFonts.playfairDisplay(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 2,
+                                          color: const Color(0xFFD4AF37),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                           ),
                         ),
                         const SizedBox(height: 25),

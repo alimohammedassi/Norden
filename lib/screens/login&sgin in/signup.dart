@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/auth_service.dart';
+import '../home_page.dart';
 
 class NordenSignupPage extends StatefulWidget {
-  const NordenSignupPage({Key? key}) : super(key: key);
+  const NordenSignupPage({super.key});
 
   @override
   State<NordenSignupPage> createState() => _NordenSignupPageState();
@@ -20,9 +23,11 @@ class _NordenSignupPageState extends State<NordenSignupPage>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -58,16 +63,17 @@ class _NordenSignupPageState extends State<NordenSignupPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0A),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF000000),
-              Color(0xFF0A0E1A),
-              Color(0xFF0D1B2A),
-              Color(0xFF1B263B),
+              Color(0xFF0A0A0A),
+              Color(0xFF141414),
+              Color(0xFF1A1A1A),
+              Color(0xFF0F0F0F),
             ],
             stops: [0.0, 0.3, 0.7, 1.0],
           ),
@@ -75,9 +81,12 @@ class _NordenSignupPageState extends State<NordenSignupPage>
         child: Container(
           decoration: BoxDecoration(
             gradient: RadialGradient(
-              center: Alignment.topRight,
-              radius: 1.5,
-              colors: [Color(0xFF1E3A5F).withOpacity(0.2), Colors.transparent],
+              center: Alignment.topCenter,
+              radius: 1.2,
+              colors: [
+                const Color(0xFFD4AF37).withOpacity(0.05),
+                Colors.transparent,
+              ],
             ),
           ),
           child: SafeArea(
@@ -92,9 +101,9 @@ class _NordenSignupPageState extends State<NordenSignupPage>
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: IconButton(
-                        icon: Icon(
-                          Icons.arrow_back_ios,
-                          color: Color(0xFFB8D4E8),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Color(0xFFD4AF37),
                         ),
                         onPressed: () => Navigator.pop(context),
                       ),
@@ -107,27 +116,31 @@ class _NordenSignupPageState extends State<NordenSignupPage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           ShaderMask(
-                            shaderCallback: (bounds) => LinearGradient(
-                              colors: [Color(0xFFFFFFFF), Color(0xFF5E9FD8)],
+                            shaderCallback: (bounds) => const LinearGradient(
+                              colors: [
+                                Color(0xFFD4AF37),
+                                Color(0xFFFFF8DC),
+                                Color(0xFFD4AF37),
+                              ],
                             ).createShader(bounds),
                             child: Text(
                               'Create\nAccount',
                               style: GoogleFonts.playfairDisplay(
-                                fontSize: 42,
-                                fontWeight: FontWeight.w300,
+                                fontSize: 46,
+                                fontWeight: FontWeight.w400,
                                 color: Colors.white,
-                                height: 1.2,
+                                height: 1.1,
                                 letterSpacing: 2,
                               ),
                             ),
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'Join Norden today',
+                            'Join the Norden experience',
                             style: GoogleFonts.inter(
-                              fontSize: 16,
-                              color: Color(0xFF8BA8C5),
-                              fontWeight: FontWeight.w300,
+                              fontSize: 15,
+                              color: const Color(0xFFD4AF37).withOpacity(0.7),
+                              fontWeight: FontWeight.w400,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -192,7 +205,9 @@ class _NordenSignupPageState extends State<NordenSignupPage>
                                     _obscurePassword
                                         ? Icons.visibility_outlined
                                         : Icons.visibility_off_outlined,
-                                    color: Color(0xFF8BA8C5),
+                                    color: const Color(
+                                      0xFFD4AF37,
+                                    ).withOpacity(0.7),
                                   ),
                                   onPressed: () {
                                     setState(() {
@@ -223,7 +238,9 @@ class _NordenSignupPageState extends State<NordenSignupPage>
                                     _obscureConfirmPassword
                                         ? Icons.visibility_outlined
                                         : Icons.visibility_off_outlined,
-                                    color: Color(0xFF8BA8C5),
+                                    color: const Color(
+                                      0xFFD4AF37,
+                                    ).withOpacity(0.7),
                                   ),
                                   onPressed: () {
                                     setState(() {
@@ -257,21 +274,19 @@ class _NordenSignupPageState extends State<NordenSignupPage>
                                         });
                                       },
                                       fillColor:
-                                          MaterialStateProperty.resolveWith((
+                                          WidgetStateProperty.resolveWith((
                                             states,
                                           ) {
                                             if (states.contains(
-                                              MaterialState.selected,
+                                              WidgetState.selected,
                                             )) {
-                                              return Color(0xFF5E9FD8);
+                                              return const Color(0xFFD4AF37);
                                             }
-                                            return Color(
-                                              0xFF2E5C8A,
-                                            ).withOpacity(0.3);
+                                            return const Color(0xFF1A1A1A);
                                           }),
                                       side: BorderSide(
-                                        color: Color(
-                                          0xFF4A7BA7,
+                                        color: const Color(
+                                          0xFFD4AF37,
                                         ).withOpacity(0.4),
                                       ),
                                     ),
@@ -281,24 +296,32 @@ class _NordenSignupPageState extends State<NordenSignupPage>
                                     child: RichText(
                                       text: TextSpan(
                                         style: GoogleFonts.inter(
-                                          color: Color(0xFFB8D4E8),
-                                          fontSize: 14,
+                                          color: const Color(
+                                            0xFFD4AF37,
+                                          ).withOpacity(0.8),
+                                          fontSize: 13,
                                         ),
                                         children: [
-                                          TextSpan(text: 'I agree to the '),
+                                          const TextSpan(
+                                            text: 'I agree to the ',
+                                          ),
                                           TextSpan(
                                             text: 'Terms & Conditions',
-                                            style: TextStyle(
-                                              color: Color(0xFF5E9FD8),
-                                              fontWeight: FontWeight.w600,
+                                            style: const TextStyle(
+                                              color: Color(0xFFD4AF37),
+                                              fontWeight: FontWeight.w700,
+                                              decoration:
+                                                  TextDecoration.underline,
                                             ),
                                           ),
-                                          TextSpan(text: ' and '),
+                                          const TextSpan(text: ' and '),
                                           TextSpan(
                                             text: 'Privacy Policy',
-                                            style: TextStyle(
-                                              color: Color(0xFF5E9FD8),
-                                              fontWeight: FontWeight.w600,
+                                            style: const TextStyle(
+                                              color: Color(0xFFD4AF37),
+                                              fontWeight: FontWeight.w700,
+                                              decoration:
+                                                  TextDecoration.underline,
                                             ),
                                           ),
                                         ],
@@ -314,59 +337,79 @@ class _NordenSignupPageState extends State<NordenSignupPage>
                                   borderRadius: BorderRadius.circular(30),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Color(0xFF5E9FD8).withOpacity(0.4),
-                                      blurRadius: 20,
+                                      color: const Color(
+                                        0xFFD4AF37,
+                                      ).withOpacity(0.4),
+                                      blurRadius: 30,
                                       spreadRadius: 2,
-                                      offset: Offset(0, 8),
+                                      offset: const Offset(0, 10),
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.3),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 5),
                                     ),
                                   ],
                                 ),
                                 child: SizedBox(
                                   width: double.infinity,
-                                  height: 58,
+                                  height: 60,
                                   child: ElevatedButton(
-                                    onPressed: () {
-                                      if (_formKey.currentState!.validate() &&
-                                          _agreeToTerms) {
-                                        HapticFeedback.lightImpact();
-                                        // Handle sign up
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Account created successfully!',
-                                            ),
-                                            backgroundColor: Color(0xFF5E9FD8),
-                                          ),
-                                        );
-                                      } else if (!_agreeToTerms) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Please agree to Terms & Conditions',
-                                            ),
-                                            backgroundColor: Color(0xFFE94560),
-                                          ),
-                                        );
-                                      }
-                                    },
+                                    onPressed: _isLoading
+                                        ? null
+                                        : _signUpWithEmail,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Color(0xFF5E9FD8),
-                                      foregroundColor: Color(0xFF0A0E1A),
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(30),
                                       ),
-                                      elevation: 0,
+                                      padding: EdgeInsets.zero,
+                                      disabledBackgroundColor:
+                                          Colors.transparent,
                                     ),
-                                    child: Text(
-                                      'CREATE ACCOUNT',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: 2.5,
+                                    child: Ink(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: _isLoading
+                                              ? [
+                                                  const Color(
+                                                    0xFFD4AF37,
+                                                  ).withOpacity(0.5),
+                                                  const Color(
+                                                    0xFFB8860B,
+                                                  ).withOpacity(0.5),
+                                                ]
+                                              : [
+                                                  const Color(0xFFD4AF37),
+                                                  const Color(0xFFB8860B),
+                                                ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(30),
+                                      ),
+                                      child: Container(
+                                        alignment: Alignment.center,
+                                        child: _isLoading
+                                            ? const SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      color: Colors.black,
+                                                      strokeWidth: 3,
+                                                    ),
+                                              )
+                                            : Text(
+                                                'CREATE ACCOUNT',
+                                                style:
+                                                    GoogleFonts.playfairDisplay(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      letterSpacing: 3,
+                                                      color: Colors.black,
+                                                    ),
+                                              ),
                                       ),
                                     ),
                                   ),
@@ -379,7 +422,9 @@ class _NordenSignupPageState extends State<NordenSignupPage>
                                   Expanded(
                                     child: Container(
                                       height: 1,
-                                      color: Color(0xFF2E5C8A).withOpacity(0.3),
+                                      color: const Color(
+                                        0xFFD4AF37,
+                                      ).withOpacity(0.2),
                                     ),
                                   ),
                                   Padding(
@@ -389,16 +434,21 @@ class _NordenSignupPageState extends State<NordenSignupPage>
                                     child: Text(
                                       'OR',
                                       style: GoogleFonts.inter(
-                                        color: Color(0xFF8BA8C5),
+                                        color: const Color(
+                                          0xFFD4AF37,
+                                        ).withOpacity(0.5),
                                         fontSize: 12,
-                                        letterSpacing: 1,
+                                        letterSpacing: 2,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
                                   Expanded(
                                     child: Container(
                                       height: 1,
-                                      color: Color(0xFF2E5C8A).withOpacity(0.3),
+                                      color: const Color(
+                                        0xFFD4AF37,
+                                      ).withOpacity(0.2),
                                     ),
                                   ),
                                 ],
@@ -411,9 +461,9 @@ class _NordenSignupPageState extends State<NordenSignupPage>
                                     child: _buildSocialButton(
                                       icon: Icons.g_mobiledata,
                                       label: 'Google',
-                                      onPressed: () {
-                                        // Handle Google sign up
-                                      },
+                                      onPressed: _isLoading
+                                          ? null
+                                          : _signUpWithGoogle,
                                     ),
                                   ),
                                   const SizedBox(width: 16),
@@ -421,9 +471,22 @@ class _NordenSignupPageState extends State<NordenSignupPage>
                                     child: _buildSocialButton(
                                       icon: Icons.apple,
                                       label: 'Apple',
-                                      onPressed: () {
-                                        // Handle Apple sign up
-                                      },
+                                      onPressed: _isLoading
+                                          ? null
+                                          : () {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Apple Sign In coming soon',
+                                                  ),
+                                                  backgroundColor: Color(
+                                                    0xFFD4AF37,
+                                                  ),
+                                                ),
+                                              );
+                                            },
                                     ),
                                   ),
                                 ],
@@ -436,7 +499,7 @@ class _NordenSignupPageState extends State<NordenSignupPage>
                                   Text(
                                     "Already have an account? ",
                                     style: GoogleFonts.inter(
-                                      color: Color(0xFF8BA8C5),
+                                      color: Colors.white.withOpacity(0.6),
                                       fontSize: 14,
                                     ),
                                   ),
@@ -446,16 +509,16 @@ class _NordenSignupPageState extends State<NordenSignupPage>
                                     },
                                     style: TextButton.styleFrom(
                                       padding: EdgeInsets.zero,
-                                      minimumSize: Size(0, 0),
+                                      minimumSize: const Size(0, 0),
                                       tapTargetSize:
                                           MaterialTapTargetSize.shrinkWrap,
                                     ),
                                     child: Text(
                                       'Sign In',
                                       style: GoogleFonts.inter(
-                                        color: Color(0xFF5E9FD8),
+                                        color: const Color(0xFFD4AF37),
                                         fontSize: 14,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                   ),
@@ -492,9 +555,9 @@ class _NordenSignupPageState extends State<NordenSignupPage>
         Text(
           label,
           style: GoogleFonts.inter(
-            color: Color(0xFFB8D4E8),
+            color: const Color(0xFFD4AF37).withOpacity(0.9),
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
           ),
         ),
@@ -504,9 +567,9 @@ class _NordenSignupPageState extends State<NordenSignupPage>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Color(0xFF000000).withOpacity(0.3),
-                blurRadius: 10,
-                offset: Offset(0, 4),
+                color: Colors.black.withOpacity(0.4),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
@@ -519,42 +582,48 @@ class _NordenSignupPageState extends State<NordenSignupPage>
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.inter(
-                color: Color(0xFF8BA8C5).withOpacity(0.5),
+                color: Colors.white.withOpacity(0.3),
                 fontSize: 14,
               ),
-              prefixIcon: Icon(icon, color: Color(0xFF5E9FD8), size: 22),
+              prefixIcon: Icon(icon, color: const Color(0xFFD4AF37), size: 22),
               suffixIcon: suffixIcon,
               filled: true,
-              fillColor: Color(0xFF1B263B).withOpacity(0.6),
+              fillColor: const Color(0xFF1A1A1A).withOpacity(0.8),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
-                  color: Color(0xFF2E5C8A).withOpacity(0.3),
+                  color: const Color(0xFFD4AF37).withOpacity(0.2),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
-                  color: Color(0xFF2E5C8A).withOpacity(0.3),
+                  color: const Color(0xFFD4AF37).withOpacity(0.2),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Color(0xFF5E9FD8), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFD4AF37),
+                  width: 2,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Color(0xFFE94560)),
+                borderSide: const BorderSide(color: Color(0xFFFF3B30)),
               ),
               focusedErrorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Color(0xFFE94560), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFFF3B30),
+                  width: 2,
+                ),
               ),
               errorStyle: GoogleFonts.inter(
-                color: Color(0xFFE94560),
+                color: const Color(0xFFFF3B30),
                 fontSize: 12,
               ),
-              contentPadding: EdgeInsets.symmetric(
+              contentPadding: const EdgeInsets.symmetric(
                 horizontal: 20,
                 vertical: 18,
               ),
@@ -568,14 +637,21 @@ class _NordenSignupPageState extends State<NordenSignupPage>
   Widget _buildSocialButton({
     required IconData icon,
     required String label,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) {
     return Container(
-      height: 52,
+      height: 54,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Color(0xFF2E5C8A).withOpacity(0.3)),
-        color: Color(0xFF1B263B).withOpacity(0.4),
+        border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.3)),
+        color: const Color(0xFF1A1A1A).withOpacity(0.6),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -585,14 +661,14 @@ class _NordenSignupPageState extends State<NordenSignupPage>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: Color(0xFFB8D4E8), size: 24),
+              Icon(icon, color: const Color(0xFFD4AF37), size: 26),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: GoogleFonts.inter(
-                  color: Color(0xFFB8D4E8),
+                  color: const Color(0xFFD4AF37).withOpacity(0.9),
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -600,5 +676,106 @@ class _NordenSignupPageState extends State<NordenSignupPage>
         ),
       ),
     );
+  }
+
+  /// Sign up with email and password using Firebase Auth
+  Future<void> _signUpWithEmail() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (!_agreeToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please agree to Terms & Conditions'),
+          backgroundColor: Color(0xFFFF3B30),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    HapticFeedback.mediumImpact();
+
+    try {
+      await _authService.signUpWithEmail(
+        email: _emailController.text,
+        password: _passwordController.text,
+        displayName: _nameController.text,
+      );
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const NordenHomePage()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_authService.getErrorMessage(e)),
+            backgroundColor: const Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred. Please try again'),
+            backgroundColor: Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  /// Sign up with Google using Firebase Auth
+  Future<void> _signUpWithGoogle() async {
+    setState(() => _isLoading = true);
+    HapticFeedback.mediumImpact();
+
+    try {
+      final userCredential = await _authService.signInWithGoogle();
+
+      if (userCredential != null && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const NordenHomePage()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_authService.getErrorMessage(e)),
+            backgroundColor: const Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred with Google Sign In'),
+            backgroundColor: Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 }

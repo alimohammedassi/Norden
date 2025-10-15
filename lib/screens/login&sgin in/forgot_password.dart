@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/auth_service.dart';
 
 class NordenForgotPasswordPage extends StatefulWidget {
-  const NordenForgotPasswordPage({Key? key}) : super(key: key);
+  const NordenForgotPasswordPage({super.key});
 
   @override
   State<NordenForgotPasswordPage> createState() =>
@@ -18,7 +20,9 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
 
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _emailSent = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -51,16 +55,17 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0A),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF000000),
-              Color(0xFF0A0E1A),
-              Color(0xFF0D1B2A),
-              Color(0xFF1B263B),
+              Color(0xFF0A0A0A),
+              Color(0xFF141414),
+              Color(0xFF1A1A1A),
+              Color(0xFF0F0F0F),
             ],
             stops: [0.0, 0.3, 0.7, 1.0],
           ),
@@ -68,9 +73,12 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
         child: Container(
           decoration: BoxDecoration(
             gradient: RadialGradient(
-              center: Alignment.topRight,
-              radius: 1.5,
-              colors: [Color(0xFF1E3A5F).withOpacity(0.2), Colors.transparent],
+              center: Alignment.topCenter,
+              radius: 1.2,
+              colors: [
+                const Color(0xFFD4AF37).withOpacity(0.05),
+                Colors.transparent,
+              ],
             ),
           ),
           child: SafeArea(
@@ -85,9 +93,9 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: IconButton(
-                        icon: Icon(
-                          Icons.arrow_back_ios,
-                          color: Color(0xFFB8D4E8),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Color(0xFFD4AF37),
                         ),
                         onPressed: () => Navigator.pop(context),
                       ),
@@ -100,16 +108,22 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           ShaderMask(
-                            shaderCallback: (bounds) => LinearGradient(
-                              colors: [Color(0xFFFFFFFF), Color(0xFF5E9FD8)],
+                            shaderCallback: (bounds) => const LinearGradient(
+                              colors: [
+                                Color(0xFFD4AF37),
+                                Color(0xFFFFF8DC),
+                                Color(0xFFD4AF37),
+                              ],
                             ).createShader(bounds),
                             child: Text(
-                              'Forgot\nPassword?',
+                              _emailSent
+                                  ? 'Check\nYour Email'
+                                  : 'Forgot\nPassword?',
                               style: GoogleFonts.playfairDisplay(
-                                fontSize: 42,
-                                fontWeight: FontWeight.w300,
+                                fontSize: 46,
+                                fontWeight: FontWeight.w400,
                                 color: Colors.white,
-                                height: 1.2,
+                                height: 1.1,
                                 letterSpacing: 2,
                               ),
                             ),
@@ -117,12 +131,12 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
                           const SizedBox(height: 12),
                           Text(
                             _emailSent
-                                ? 'Check your email for reset instructions'
+                                ? 'We sent reset instructions to your email'
                                 : 'Enter your email to reset password',
                             style: GoogleFonts.inter(
-                              fontSize: 16,
-                              color: Color(0xFF8BA8C5),
-                              fontWeight: FontWeight.w300,
+                              fontSize: 15,
+                              color: const Color(0xFFD4AF37).withOpacity(0.7),
+                              fontWeight: FontWeight.w400,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -179,40 +193,64 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
               borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
-                  color: Color(0xFF5E9FD8).withOpacity(0.4),
-                  blurRadius: 20,
+                  color: const Color(0xFFD4AF37).withOpacity(0.4),
+                  blurRadius: 30,
                   spreadRadius: 2,
-                  offset: Offset(0, 8),
+                  offset: const Offset(0, 10),
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 5),
                 ),
               ],
             ),
             child: SizedBox(
               width: double.infinity,
-              height: 58,
+              height: 60,
               child: ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    HapticFeedback.lightImpact();
-                    setState(() {
-                      _emailSent = true;
-                    });
-                    // Here you would typically send the reset email
-                  }
-                },
+                onPressed: _isLoading ? null : _sendResetEmail,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF5E9FD8),
-                  foregroundColor: Color(0xFF0A0E1A),
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
-                  elevation: 0,
+                  padding: EdgeInsets.zero,
+                  disabledBackgroundColor: Colors.transparent,
                 ),
-                child: Text(
-                  'SEND RESET LINK',
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 2.5,
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: _isLoading
+                          ? [
+                              const Color(0xFFD4AF37).withOpacity(0.5),
+                              const Color(0xFFB8860B).withOpacity(0.5),
+                            ]
+                          : [const Color(0xFFD4AF37), const Color(0xFFB8860B)],
+                    ),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Container(
+                    alignment: Alignment.center,
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.black,
+                              strokeWidth: 3,
+                            ),
+                          )
+                        : Text(
+                            'SEND RESET LINK',
+                            style: GoogleFonts.playfairDisplay(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 3,
+                              color: Colors.black,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -226,7 +264,7 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
               Text(
                 "Remember your password? ",
                 style: GoogleFonts.inter(
-                  color: Color(0xFF8BA8C5),
+                  color: Colors.white.withOpacity(0.6),
                   fontSize: 14,
                 ),
               ),
@@ -236,15 +274,15 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
                 },
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
-                  minimumSize: Size(0, 0),
+                  minimumSize: const Size(0, 0),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: Text(
                   'Sign In',
                   style: GoogleFonts.inter(
-                    color: Color(0xFF5E9FD8),
+                    color: const Color(0xFFD4AF37),
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -260,43 +298,48 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
       children: [
         // Success icon
         Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF2E5C8A).withOpacity(0.3),
-                Color(0xFF1E3A5F).withOpacity(0.2),
+                const Color(0xFFD4AF37).withOpacity(0.15),
+                const Color(0xFFB8860B).withOpacity(0.1),
               ],
             ),
             border: Border.all(
-              color: Color(0xFF4A7BA7).withOpacity(0.4),
+              color: const Color(0xFFD4AF37).withOpacity(0.3),
               width: 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: Color(0xFF2E5C8A).withOpacity(0.3),
-                blurRadius: 30,
+                color: const Color(0xFFD4AF37).withOpacity(0.2),
+                blurRadius: 40,
                 spreadRadius: 5,
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.5),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
-          child: Icon(
+          child: const Icon(
             Icons.mark_email_read_outlined,
-            size: 60,
-            color: Color(0xFF5E9FD8),
+            size: 70,
+            color: Color(0xFFD4AF37),
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 40),
         // Success message
         Text(
           'Reset Link Sent!',
-          style: GoogleFonts.inter(
-            fontSize: 24,
+          style: GoogleFonts.playfairDisplay(
+            fontSize: 28,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: const Color(0xFFD4AF37),
             letterSpacing: 1,
           ),
         ),
@@ -305,8 +348,8 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
           'We\'ve sent a password reset link to\n${_emailController.text}',
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
-            fontSize: 16,
-            color: Color(0xFF8BA8C5),
+            fontSize: 15,
+            color: Colors.white.withOpacity(0.7),
             height: 1.5,
           ),
         ),
@@ -316,27 +359,25 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
             border: Border.all(
-              color: Color(0xFF5E9FD8).withOpacity(0.5),
-              width: 1.5,
+              color: const Color(0xFFD4AF37).withOpacity(0.5),
+              width: 2,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              ),
+            ],
           ),
           child: SizedBox(
             width: double.infinity,
             height: 58,
             child: ElevatedButton(
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                // Resend email logic here
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Reset link sent again!'),
-                    backgroundColor: Color(0xFF5E9FD8),
-                  ),
-                );
-              },
+              onPressed: _sendResetEmail,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
-                foregroundColor: Color(0xFF5E9FD8),
+                foregroundColor: const Color(0xFFD4AF37),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
@@ -344,10 +385,10 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
               ),
               child: Text(
                 'RESEND LINK',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.playfairDisplay(
                   fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 2.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 3,
                 ),
               ),
             ),
@@ -362,7 +403,7 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
           child: Text(
             'Back to Sign In',
             style: GoogleFonts.inter(
-              color: Color(0xFF8BA8C5),
+              color: Colors.white.withOpacity(0.7),
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
@@ -388,9 +429,9 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
         Text(
           label,
           style: GoogleFonts.inter(
-            color: Color(0xFFB8D4E8),
+            color: const Color(0xFFD4AF37).withOpacity(0.9),
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
           ),
         ),
@@ -400,9 +441,9 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Color(0xFF000000).withOpacity(0.3),
-                blurRadius: 10,
-                offset: Offset(0, 4),
+                color: Colors.black.withOpacity(0.4),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
@@ -415,42 +456,48 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.inter(
-                color: Color(0xFF8BA8C5).withOpacity(0.5),
+                color: Colors.white.withOpacity(0.3),
                 fontSize: 14,
               ),
-              prefixIcon: Icon(icon, color: Color(0xFF5E9FD8), size: 22),
+              prefixIcon: Icon(icon, color: const Color(0xFFD4AF37), size: 22),
               suffixIcon: suffixIcon,
               filled: true,
-              fillColor: Color(0xFF1B263B).withOpacity(0.6),
+              fillColor: const Color(0xFF1A1A1A).withOpacity(0.8),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
-                  color: Color(0xFF2E5C8A).withOpacity(0.3),
+                  color: const Color(0xFFD4AF37).withOpacity(0.2),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
-                  color: Color(0xFF2E5C8A).withOpacity(0.3),
+                  color: const Color(0xFFD4AF37).withOpacity(0.2),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Color(0xFF5E9FD8), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFD4AF37),
+                  width: 2,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Color(0xFFE94560)),
+                borderSide: const BorderSide(color: Color(0xFFFF3B30)),
               ),
               focusedErrorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Color(0xFFE94560), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFFF3B30),
+                  width: 2,
+                ),
               ),
               errorStyle: GoogleFonts.inter(
-                color: Color(0xFFE94560),
+                color: const Color(0xFFFF3B30),
                 fontSize: 12,
               ),
-              contentPadding: EdgeInsets.symmetric(
+              contentPadding: const EdgeInsets.symmetric(
                 horizontal: 20,
                 vertical: 18,
               ),
@@ -459,5 +506,56 @@ class _NordenForgotPasswordPageState extends State<NordenForgotPasswordPage>
         ),
       ],
     );
+  }
+
+  /// Send password reset email using Firebase Auth
+  Future<void> _sendResetEmail() async {
+    if (!_emailSent && !_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    HapticFeedback.mediumImpact();
+
+    try {
+      await _authService.sendPasswordResetEmail(_emailController.text);
+
+      if (mounted) {
+        setState(() {
+          _emailSent = true;
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password reset link sent successfully'),
+            backgroundColor: Color(0xFFD4AF37),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_authService.getErrorMessage(e)),
+            backgroundColor: const Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred. Please try again'),
+            backgroundColor: Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
