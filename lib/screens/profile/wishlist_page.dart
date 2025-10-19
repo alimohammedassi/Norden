@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/wishlist_service.dart';
+import '../../models/wishlist_item.dart';
 import '../product_details.dart';
 
 class WishlistPage extends StatefulWidget {
@@ -41,7 +42,7 @@ class _WishlistPageState extends State<WishlistPage> {
             children: [
               _buildHeader(),
               Expanded(
-                child: StreamBuilder<List<Map<String, dynamic>>>(
+                child: StreamBuilder<List<WishlistItem>>(
                   stream: _wishlistService.getWishlistProductsStream(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -176,8 +177,8 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  Widget _buildProductCard(Map<String, dynamic> product) {
-    final images = product['images'] as List?;
+  Widget _buildProductCard(WishlistItem product) {
+    final images = [product.imageUrl]; // Convert single image URL to list
     final imageUrl = images != null && images.isNotEmpty ? images[0] : '';
 
     return GestureDetector(
@@ -185,7 +186,17 @@ class _WishlistPageState extends State<WishlistPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ProductDetailsPage(product: product),
+            builder: (context) => ProductDetailsPage(
+              product: {
+                'id': product.productId,
+                'name': product.productName,
+                'price': product.price,
+                'images': [product.imageUrl],
+                'category': product.category,
+                'colors': ['Black', 'White'], // Default colors
+                'sizes': ['S', 'M', 'L'], // Default sizes
+              },
+            ),
           ),
         );
       },
@@ -238,7 +249,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   right: 8,
                   child: GestureDetector(
                     onTap: () {
-                      _wishlistService.removeFromWishlist(product['id']);
+                      _wishlistService.removeFromWishlist(product.productId);
                     },
                     child: Container(
                       padding: const EdgeInsets.all(6),
@@ -264,7 +275,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      product['name'] ?? 'Unnamed Product',
+                      product.productName,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
@@ -275,7 +286,7 @@ class _WishlistPageState extends State<WishlistPage> {
                     ),
                     const Spacer(),
                     Text(
-                      '\$${product['price'] ?? 0}',
+                      '\$${product.price}',
                       style: GoogleFonts.playfairDisplay(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/cart_service.dart';
 import '../services/address_service.dart';
+import '../models/address.dart';
 import 'profile/addresses_page.dart';
 
 class CheckoutPage extends StatefulWidget {
@@ -15,7 +16,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   final CartService _cartService = CartService();
   final AddressService _addressService = AddressService();
 
-  Map<String, dynamic>? _selectedAddress;
+  Address? _selectedAddress;
   int _selectedPaymentMethod = 0; // 0: Card, 1: Cash on Delivery
   bool _isProcessing = false;
 
@@ -181,7 +182,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _selectedAddress!['label'] ?? 'Address',
+                      _selectedAddress!.label,
                       style: GoogleFonts.playfairDisplay(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -210,25 +211,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                _buildAddressRow(
-                  Icons.person_outline,
-                  _selectedAddress!['name'] ?? '',
-                ),
+                _buildAddressRow(Icons.person_outline, _selectedAddress!.name),
                 const SizedBox(height: 8),
                 _buildAddressRow(
                   Icons.location_on_outlined,
-                  _selectedAddress!['street'] ?? '',
+                  _selectedAddress!.street,
                 ),
                 const SizedBox(height: 8),
                 _buildAddressRow(
                   Icons.location_city_outlined,
-                  '${_selectedAddress!['city']}, ${_selectedAddress!['country']}',
+                  '${_selectedAddress!.city}, ${_selectedAddress!.country}',
                 ),
                 const SizedBox(height: 8),
-                _buildAddressRow(
-                  Icons.phone_outlined,
-                  _selectedAddress!['phone'] ?? '',
-                ),
+                _buildAddressRow(Icons.phone_outlined, _selectedAddress!.phone),
               ],
             ),
           )

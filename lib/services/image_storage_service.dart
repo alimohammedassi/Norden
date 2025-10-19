@@ -1,14 +1,12 @@
-import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
-/// Service for managing image uploads to Firebase Storage
+/// Service for managing image uploads
+/// Note: Image upload to backend is not yet implemented
 class ImageStorageService {
   static final ImageStorageService _instance = ImageStorageService._internal();
   factory ImageStorageService() => _instance;
   ImageStorageService._internal();
 
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   final ImagePicker _picker = ImagePicker();
 
   /// Pick multiple images from gallery
@@ -38,73 +36,42 @@ class ImageStorageService {
     }
   }
 
-  /// Upload a single image to Firebase Storage
+  /// Upload a single image to backend
   /// Returns the download URL
+  /// Note: This is not yet implemented in the backend API
   Future<String?> uploadImage(XFile imageFile, String productId) async {
-    try {
-      final String fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_${imageFile.name}';
-      final Reference ref = _storage.ref().child(
-        'products/$productId/$fileName',
-      );
-
-      final File file = File(imageFile.path);
-      final UploadTask uploadTask = ref.putFile(file);
-
-      final TaskSnapshot snapshot = await uploadTask;
-      final String downloadUrl = await snapshot.ref.getDownloadURL();
-
-      return downloadUrl;
-    } catch (e) {
-      print('Error uploading image: $e');
-      return null;
-    }
+    // TODO: Implement image upload to backend
+    // For now, return null or a placeholder
+    print('Image upload not yet implemented in backend API');
+    return null;
   }
 
-  /// Upload multiple images to Firebase Storage
+  /// Upload multiple images to backend
   /// Returns list of download URLs
-  Future<List<String>> uploadMultipleImages(
+  /// Note: This is not yet implemented in the backend API
+  Future<List<String>?> uploadImages(
     List<XFile> imageFiles,
     String productId,
   ) async {
-    final List<String> downloadUrls = [];
-
-    for (final imageFile in imageFiles) {
-      final String? url = await uploadImage(imageFile, productId);
-      if (url != null) {
-        downloadUrls.add(url);
-      }
-    }
-
-    return downloadUrls;
+    // TODO: Implement multiple image upload to backend
+    // For now, return null or empty list
+    print('Multiple image upload not yet implemented in backend API');
+    return null;
   }
 
-  /// Delete an image from Firebase Storage
+  /// Delete an image from backend
+  /// Note: This is not yet implemented in the backend API
   Future<bool> deleteImage(String imageUrl) async {
-    try {
-      final Reference ref = _storage.refFromURL(imageUrl);
-      await ref.delete();
-      return true;
-    } catch (e) {
-      print('Error deleting image: $e');
-      return false;
-    }
+    // TODO: Implement image deletion in backend
+    print('Image deletion not yet implemented in backend API');
+    return false;
   }
 
   /// Delete all images for a product
-  Future<bool> deleteProductImages(String productId) async {
-    try {
-      final Reference ref = _storage.ref().child('products/$productId');
-      final ListResult result = await ref.listAll();
-
-      for (final Reference fileRef in result.items) {
-        await fileRef.delete();
-      }
-
-      return true;
-    } catch (e) {
-      print('Error deleting product images: $e');
-      return false;
-    }
+  /// Note: This is not yet implemented in the backend API
+  Future<bool> deleteAllProductImages(String productId) async {
+    // TODO: Implement bulk image deletion in backend
+    print('Bulk image deletion not yet implemented in backend API');
+    return false;
   }
 }

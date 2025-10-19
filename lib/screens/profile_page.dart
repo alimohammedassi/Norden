@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import 'NordenIntroPage.dart';
 import 'profile/edit_profile_page.dart';
@@ -23,7 +23,7 @@ class _ProfilePageState extends State<ProfilePage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   final AuthService _authService = AuthService();
-  User? _currentUser;
+  Map<String, dynamic>? _currentUser;
 
   @override
   void initState() {
@@ -158,8 +158,8 @@ class _ProfilePageState extends State<ProfilePage>
     final bool isGuest = _authService.isAnonymous;
     final String displayName = isGuest
         ? 'Guest'
-        : (_currentUser?.displayName ?? 'Guest');
-    final String email = _currentUser?.email ?? '';
+        : (_currentUser?['displayName'] ?? 'Guest');
+    final String email = _currentUser?['email'] ?? '';
     final String initials = displayName.isNotEmpty
         ? displayName.substring(0, 1).toUpperCase()
         : 'G';
@@ -188,10 +188,10 @@ class _ProfilePageState extends State<ProfilePage>
               ),
             ],
           ),
-          child: _currentUser?.photoURL != null
+          child: _currentUser?['photoURL'] != null
               ? ClipOval(
                   child: Image.network(
-                    _currentUser!.photoURL!,
+                    _currentUser!['photoURL']!,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return _buildInitialsAvatar(initials);
@@ -605,38 +605,13 @@ class _ProfilePageState extends State<ProfilePage>
     if (_currentUser == null) return 'Guest';
     if (_authService.isAnonymous) return 'Anonymous';
 
-    for (var providerData in _currentUser!.providerData) {
-      if (providerData.providerId == 'google.com') {
-        return 'Google';
-      } else if (providerData.providerId == 'password') {
-        return 'Email/Password';
-      }
-    }
-    return 'Unknown';
+    // TODO: Implement provider detection for backend user data
+    return 'Email/Password';
   }
 
   String _getMemberSince() {
-    if (_currentUser?.metadata.creationTime == null) {
-      return 'Unknown';
-    }
-
-    final creationTime = _currentUser!.metadata.creationTime!;
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-
-    return '${months[creationTime.month - 1]} ${creationTime.year}';
+    // TODO: Implement member since for backend user data
+    return 'Unknown';
   }
 
   Future<void> _signOut() async {

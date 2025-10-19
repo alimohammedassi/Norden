@@ -1,127 +1,255 @@
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../models/address.dart';
+import 'backend_address_service.dart';
+import 'local_address_service.dart';
+import 'backend_auth_service.dart';
 
-/// Service to manage user addresses
-class AddressService extends ChangeNotifier {
+/// Address service wrapper for backward compatibility
+class AddressService with ChangeNotifier {
   static final AddressService _instance = AddressService._internal();
   factory AddressService() => _instance;
   AddressService._internal();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final BackendAddressService _backendAddress = BackendAddressService();
+  final LocalAddressService _localAddress = LocalAddressService();
+  final BackendAuthService _authService = BackendAuthService();
 
-  List<Map<String, dynamic>> _addresses = [];
-  List<Map<String, dynamic>> get addresses => _addresses;
+  // Local cache
+  List<Address> _addresses = [];
+  Address? _defaultAddress;
+
+  /// Check if user is authenticated
+  bool get _isAuthenticated => _authService.currentUser != null;
+
+  /// Get all user addresses
+  Future<List<Address>> getAddresses() async {
+    try {
+      if (_isAuthenticated) {
+        return await _backendAddress.getAddresses();
+      } else {
+        return _localAddress.addresses;
+      }
+    } catch (e) {
+      debugPrint('Error getting addresses: $e');
+      return _isAuthenticated ? [] : _localAddress.addresses;
+    }
+  }
+
+  /// Add new address
+  Future<void> addAddress({
+    required String label,
+    required String name,
+    required String phone,
+    required String street,
+    required String city,
+    required String country,
+    bool isDefault = false,
+  }) async {
+    try {
+      if (_isAuthenticated) {
+        await _backendAddress.addAddress(
+          label: label,
+          name: name,
+          phone: phone,
+          street: street,
+          city: city,
+          country: country,
+          isDefault: isDefault,
+        );
+      } else {
+        final now = DateTime.now();
+        final address = Address(
+          id: now.millisecondsSinceEpoch.toString(),
+          label: label,
+          name: name,
+          phone: phone,
+          street: street,
+          city: city,
+          country: country,
+          isDefault: isDefault,
+          createdAt: now,
+          updatedAt: now,
+        );
+        await _localAddress.addAddress(address);
+      }
+    } catch (e) {
+      debugPrint('Error adding address: $e');
+      rethrow;
+    }
+  }
+
+  /// Update address
+  Future<void> updateAddress({
+    required String addressId,
+    required String label,
+    required String name,
+    required String phone,
+    required String street,
+    required String city,
+    required String country,
+    bool isDefault = false,
+  }) async {
+    try {
+      await _backendAddress.updateAddress(
+        addressId: addressId,
+        label: label,
+        name: name,
+        phone: phone,
+        street: street,
+        city: city,
+        country: country,
+        isDefault: isDefault,
+      );
+    } catch (e) {
+      debugPrint('Error updating address: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete address
+  Future<void> deleteAddress(String addressId) async {
+    try {
+      await _backendAddress.deleteAddress(addressId);
+    } catch (e) {
+      debugPrint('Error deleting address: $e');
+      rethrow;
+    }
+  }
+
+  /// Set default address
+  Future<void> setDefaultAddress(String addressId) async {
+    try {
+      await _backendAddress.setDefaultAddress(addressId);
+    } catch (e) {
+      debugPrint('Error setting default address: $e');
+      rethrow;
+    }
+  }
 
   /// Get default address
-  Map<String, dynamic>? get defaultAddress {
-    if (_addresses.isEmpty) return null;
-
+  Future<Address?> getDefaultAddress() async {
     try {
-      return _addresses.firstWhere(
-        (addr) => addr['isDefault'] == true,
-        orElse: () => _addresses.first,
-      );
+      return await _backendAddress.getDefaultAddress();
     } catch (e) {
       debugPrint('Error getting default address: $e');
       return null;
     }
   }
 
-  /// Load addresses from Firestore
-  Future<void> loadAddresses() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
+  /// Get address by ID
+  Future<Address?> getAddressById(String addressId) async {
     try {
-      final doc = await _firestore.collection('addresses').doc(user.uid).get();
-      if (doc.exists) {
-        final data = doc.data();
-        if (data != null && data['addresses'] != null) {
-          _addresses = List<Map<String, dynamic>>.from(
-            data['addresses'] as List,
-          );
-          notifyListeners();
-        }
-      }
+      return await _backendAddress.getAddressById(addressId);
     } catch (e) {
-      debugPrint('Error loading addresses: $e');
+      debugPrint('Error getting address by ID: $e');
+      return null;
     }
   }
 
-  /// Save addresses to Firestore
-  Future<void> _saveAddresses() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
+  /// Load addresses and update local cache
+  Future<void> loadAddresses() async {
     try {
-      await _firestore.collection('addresses').doc(user.uid).set({
-        'addresses': _addresses,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      if (_isAuthenticated) {
+        _addresses = await _backendAddress.getAddresses();
+        _defaultAddress = await _backendAddress.getDefaultAddress();
+      } else {
+        await _localAddress.initialize();
+        _addresses = _localAddress.addresses;
+        _defaultAddress = _localAddress.defaultAddress;
+      }
       notifyListeners();
     } catch (e) {
-      debugPrint('Error saving addresses: $e');
+      debugPrint('Error loading addresses: $e');
+      // Fallback to local storage for guest users
+      if (!_isAuthenticated) {
+        try {
+          await _localAddress.initialize();
+          _addresses = _localAddress.addresses;
+          _defaultAddress = _localAddress.defaultAddress;
+          notifyListeners();
+        } catch (localError) {
+          debugPrint('Error loading local addresses: $localError');
+        }
+      }
     }
   }
 
-  /// Add new address
-  Future<void> addAddress(Map<String, dynamic> address) async {
-    // If this is the first address, make it default
-    if (_addresses.isEmpty) {
-      address['isDefault'] = true;
-    }
+  /// Get addresses (cached version)
+  List<Address> get addresses => _addresses;
 
-    _addresses.add(address);
-    await _saveAddresses();
+  /// Get default address (cached version)
+  Address? get defaultAddress => _defaultAddress;
+
+  /// Add address (alternative method signature)
+  Future<void> addAddressObject(Address address) async {
+    try {
+      if (_isAuthenticated) {
+        await addAddress(
+          label: address.label,
+          name: address.name,
+          phone: address.phone,
+          street: address.street,
+          city: address.city,
+          country: address.country,
+          isDefault: address.isDefault,
+        );
+      } else {
+        await _localAddress.addAddress(address);
+      }
+      await loadAddresses();
+    } catch (e) {
+      debugPrint('Error adding address object: $e');
+      rethrow;
+    }
   }
 
-  /// Update address
-  Future<void> updateAddress(int index, Map<String, dynamic> address) async {
+  /// Update address by index (alternative method signature)
+  Future<void> updateAddressByIndex(int index, Address address) async {
+    try {
+      if (_isAuthenticated) {
+        if (index >= 0 && index < _addresses.length) {
+          final addressId = _addresses[index].id;
+          await updateAddress(
+            addressId: addressId,
+            label: address.label,
+            name: address.name,
+            phone: address.phone,
+            street: address.street,
+            city: address.city,
+            country: address.country,
+            isDefault: address.isDefault,
+          );
+        }
+      } else {
+        await _localAddress.updateAddressByIndex(index, address);
+      }
+      await loadAddresses();
+    } catch (e) {
+      debugPrint('Error updating address by index: $e');
+      rethrow;
+    }
+  }
+
+  /// Set default address by index
+  Future<void> setDefaultAddressByIndex(int index) async {
     if (index >= 0 && index < _addresses.length) {
-      _addresses[index] = address;
-      await _saveAddresses();
+      final addressId = _addresses[index].id;
+      await setDefaultAddress(addressId);
+      await loadAddresses();
     }
   }
 
-  /// Remove address
+  /// Remove address by index
   Future<void> removeAddress(int index) async {
     if (index >= 0 && index < _addresses.length) {
-      final wasDefault = _addresses[index]['isDefault'] == true;
-      _addresses.removeAt(index);
-
-      // If we removed the default address, make the first one default
-      if (wasDefault && _addresses.isNotEmpty) {
-        _addresses[0]['isDefault'] = true;
-      }
-
-      await _saveAddresses();
+      final addressId = _addresses[index].id;
+      await deleteAddress(addressId);
+      await loadAddresses();
     }
   }
 
-  /// Set default address
-  Future<void> setDefaultAddress(int index) async {
-    if (index >= 0 && index < _addresses.length) {
-      // Remove default from all
-      for (var addr in _addresses) {
-        addr['isDefault'] = false;
-      }
-      // Set new default
-      _addresses[index]['isDefault'] = true;
-      await _saveAddresses();
-    }
-  }
-
-  /// Clear all addresses
-  Future<void> clearAddresses() async {
-    _addresses.clear();
-    await _saveAddresses();
-  }
-
-  /// Clear local state (for sign out)
-  void clearLocalState() {
-    _addresses.clear();
-    notifyListeners();
+  /// Initialize address service
+  Future<void> initialize() async {
+    await loadAddresses();
   }
 }

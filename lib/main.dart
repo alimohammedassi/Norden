@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/home_page.dart';
 import 'screens/NordenIntroPage.dart';
+import 'screens/admin/admin_dashboard.dart';
+import 'services/backend_auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  // Initialize backend auth service with timeout
+  final authService = BackendAuthService();
+  await authService.initWithTimeout();
+
   runApp(const NordenApp());
 }
 
@@ -95,27 +100,74 @@ class NordenApp extends StatelessWidget {
 }
 
 /// Wrapper to check authentication state and navigate accordingly
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
   @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _hasTimedOut = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Set a timeout to show intro page if auth check takes too long
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          _hasTimedOut = true;
+        });
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+    final authService = BackendAuthService();
+
+    // If timeout occurred, show intro page
+    if (_hasTimedOut) {
+      return const NordenIntroPage();
+    }
+
+    return StreamBuilder<Map<String, dynamic>?>(
+      stream: authService.authStateChanges,
       builder: (context, snapshot) {
-        // Show loading while checking auth state
+        // Show loading while checking auth state (with timeout)
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             backgroundColor: Color(0xFF0A0A0A),
             body: Center(
-              child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: Color(0xFFD4AF37)),
+                  SizedBox(height: 16),
+                  Text(
+                    'Loading...',
+                    style: TextStyle(
+                      color: Color(0xFFD4AF37),
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
 
-        // If user is logged in, go to home page
+        // If user is logged in, go to appropriate page
         if (snapshot.hasData && snapshot.data != null) {
-          return const NordenHomePage();
+          final userData = snapshot.data!;
+          final isAdmin = userData['isAdmin'] == true;
+
+          if (isAdmin) {
+            return const AdminDashboard();
+          } else {
+            return const NordenHomePage();
+          }
         }
 
         // If user is not logged in, show intro page

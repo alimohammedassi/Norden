@@ -1,40 +1,24 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/product.dart';
+import 'backend_product_service.dart';
 
-/// Product service for Firebase Firestore operations
+/// Product service wrapper for backward compatibility
 class ProductService {
   static final ProductService _instance = ProductService._internal();
   factory ProductService() => _instance;
   ProductService._internal();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _collection = 'products';
+  final BackendProductService _backendProduct = BackendProductService();
 
   /// Get all products stream
   Stream<List<Product>> getProductsStream() {
-    return _firestore
-        .collection(_collection)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => Product.fromMap(doc.data(), doc.id))
-              .toList();
-        });
+    return _backendProduct.getProductsStream();
   }
 
   /// Get all products (one-time fetch)
   Future<List<Product>> getProducts() async {
     try {
-      final snapshot = await _firestore
-          .collection(_collection)
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      return snapshot.docs
-          .map((doc) => Product.fromMap(doc.data(), doc.id))
-          .toList();
+      return await _backendProduct.getProducts();
     } catch (e) {
       debugPrint('Error getting products: $e');
       rethrow;
@@ -44,114 +28,92 @@ class ProductService {
   /// Get product by ID
   Future<Product?> getProduct(String id) async {
     try {
-      final doc = await _firestore.collection(_collection).doc(id).get();
-
-      if (doc.exists) {
-        return Product.fromMap(doc.data()!, doc.id);
-      }
-      return null;
+      return await _backendProduct.getProduct(id);
     } catch (e) {
       debugPrint('Error getting product: $e');
-      rethrow;
+      return null;
     }
   }
 
-  /// Add new product
+  /// Add new product (Admin only)
   Future<String> addProduct(Product product) async {
-    try {
-      final docRef = await _firestore
-          .collection(_collection)
-          .add(
-            product
-                .copyWith(createdAt: DateTime.now(), updatedAt: DateTime.now())
-                .toMap(),
-          );
-
-      debugPrint('Product added with ID: ${docRef.id}');
-      return docRef.id;
-    } catch (e) {
-      debugPrint('Error adding product: $e');
-      rethrow;
-    }
+    // Note: This would need to be implemented in the backend API
+    // For now, throw an exception
+    throw UnimplementedError(
+      'Product creation not yet implemented in backend API',
+    );
   }
 
-  /// Update existing product
+  /// Update product (Admin only)
   Future<void> updateProduct(String id, Product product) async {
-    try {
-      await _firestore
-          .collection(_collection)
-          .doc(id)
-          .update(product.copyWith(updatedAt: DateTime.now()).toMap());
-
-      debugPrint('Product updated: $id');
-    } catch (e) {
-      debugPrint('Error updating product: $e');
-      rethrow;
-    }
+    // Note: This would need to be implemented in the backend API
+    // For now, throw an exception
+    throw UnimplementedError(
+      'Product update not yet implemented in backend API',
+    );
   }
 
-  /// Delete product
+  /// Delete product (Admin only)
   Future<void> deleteProduct(String id) async {
-    try {
-      await _firestore.collection(_collection).doc(id).delete();
-      debugPrint('Product deleted: $id');
-    } catch (e) {
-      debugPrint('Error deleting product: $e');
-      rethrow;
-    }
+    // Note: This would need to be implemented in the backend API
+    // For now, throw an exception
+    throw UnimplementedError(
+      'Product deletion not yet implemented in backend API',
+    );
   }
 
-  /// Get products by category
-  Future<List<Product>> getProductsByCategory(String category) async {
+  /// Search products
+  Future<List<Product>> searchProducts(String query) async {
     try {
-      final snapshot = await _firestore
-          .collection(_collection)
-          .where('category', isEqualTo: category)
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      return snapshot.docs
-          .map((doc) => Product.fromMap(doc.data(), doc.id))
-          .toList();
+      return await _backendProduct.searchProducts(query: query);
     } catch (e) {
-      debugPrint('Error getting products by category: $e');
-      rethrow;
+      debugPrint('Error searching products: $e');
+      return [];
     }
   }
 
   /// Get featured products
   Future<List<Product>> getFeaturedProducts() async {
     try {
-      final snapshot = await _firestore
-          .collection(_collection)
-          .where('isFeatured', isEqualTo: true)
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      return snapshot.docs
-          .map((doc) => Product.fromMap(doc.data(), doc.id))
-          .toList();
+      return await _backendProduct.getFeaturedProducts();
     } catch (e) {
       debugPrint('Error getting featured products: $e');
-      rethrow;
+      return [];
     }
   }
 
   /// Get new products
   Future<List<Product>> getNewProducts() async {
     try {
-      final snapshot = await _firestore
-          .collection(_collection)
-          .where('isNew', isEqualTo: true)
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      return snapshot.docs
-          .map((doc) => Product.fromMap(doc.data(), doc.id))
-          .toList();
+      return await _backendProduct.getNewProducts();
     } catch (e) {
       debugPrint('Error getting new products: $e');
-      rethrow;
+      return [];
     }
+  }
+
+  /// Get products by category
+  Future<List<Product>> getProductsByCategory(String category) async {
+    try {
+      return await _backendProduct.getProductsByCategory(category);
+    } catch (e) {
+      debugPrint('Error getting products by category: $e');
+      return [];
+    }
+  }
+
+  /// Get available categories
+  List<String> getCategories() {
+    return _backendProduct.getCategories();
+  }
+
+  /// Get available colors
+  List<String> getColors() {
+    return _backendProduct.getColors();
+  }
+
+  /// Get available sizes
+  List<String> getSizes() {
+    return _backendProduct.getSizes();
   }
 }

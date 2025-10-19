@@ -91,7 +91,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     final productId = widget.product['id']?.toString();
     if (productId != null) {
       setState(() {
-        _isFavorite = _wishlistService.isInWishlist(productId);
+        _isFavorite = _wishlistService.isInWishlistSync(productId);
       });
     }
   }
@@ -164,7 +164,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     // Add to cart service
     final cartService = CartService();
     cartService.addItem(
-      product: widget.product,
+      productId: widget.product['id'],
       quantity: _quantity,
       selectedColor: widget.product['colors'][_selectedColorIndex],
       selectedSize: widget.product['sizes'][_selectedSizeIndex],

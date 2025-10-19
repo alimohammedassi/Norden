@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/cart_service.dart';
+import '../models/cart_item.dart';
 import 'checkout_page.dart';
 
 /// Shopping cart page with vintage luxury theme
@@ -29,6 +30,9 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
 
     // Listen to cart changes
     _cartService.addListener(_onCartChanged);
+
+    // Load cart data
+    _cartService.initialize();
   }
 
   void _initializeAnimations() {
@@ -448,7 +452,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                   ),
                 ),
                 child: Image.asset(
-                  item.product['image'],
+                  item.imageUrl,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
@@ -479,7 +483,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                       children: [
                         Expanded(
                           child: Text(
-                            item.product['name'],
+                            item.productName,
                             style: GoogleFonts.playfairDisplay(
                               color: Colors.white,
                               fontSize: 15,
@@ -602,7 +606,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                               HapticFeedback.lightImpact();
                               if (item.quantity > 1) {
                                 _cartService.updateQuantity(
-                                  item.uniqueId,
+                                  item.id,
                                   item.quantity - 1,
                                 );
                               } else {
@@ -627,7 +631,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                               HapticFeedback.lightImpact();
                               if (item.quantity < 99) {
                                 _cartService.updateQuantity(
-                                  item.uniqueId,
+                                  item.id,
                                   item.quantity + 1,
                                 );
                               }
@@ -870,7 +874,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
           ),
         ),
         content: Text(
-          'Are you sure you want to remove ${item.product['name']} from your cart?',
+          'Are you sure you want to remove ${item.productName} from your cart?',
           style: GoogleFonts.inter(
             color: Colors.white.withOpacity(0.8),
             fontSize: 14,
@@ -889,7 +893,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
           ),
           TextButton(
             onPressed: () {
-              _cartService.removeItem(item.uniqueId);
+              _cartService.removeItem(item.id);
               Navigator.pop(context);
               HapticFeedback.mediumImpact();
             },

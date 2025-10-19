@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'signup.dart';
 import 'forgot_password.dart';
 import '../home_page.dart';
 import '../admin/admin_dashboard.dart';
 import '../NordenIntroPage.dart';
-import '../../services/auth_service.dart';
-import '../../config/admin_config.dart';
+import '../../services/backend_auth_service.dart';
+import '../../services/api_service.dart';
 
 class NordenLoginPage extends StatefulWidget {
   const NordenLoginPage({super.key});
@@ -26,7 +25,7 @@ class _NordenLoginPageState extends State<NordenLoginPage>
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
+  final BackendAuthService _authService = BackendAuthService();
   bool _obscurePassword = true;
   bool _rememberMe = false;
   bool _isLoading = false;
@@ -618,7 +617,7 @@ class _NordenLoginPageState extends State<NordenLoginPage>
     );
   }
 
-  /// Sign in with email and password using Firebase Auth
+  /// Sign in with email and password using Backend Auth
   Future<void> _signInWithEmail() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -628,14 +627,14 @@ class _NordenLoginPageState extends State<NordenLoginPage>
     HapticFeedback.mediumImpact();
 
     try {
-      await _authService.signInWithEmail(
+      final userData = await _authService.login(
         email: _emailController.text,
         password: _passwordController.text,
       );
 
       if (mounted) {
         // Check if user is admin
-        final isAdmin = AdminConfig.isAdmin(_emailController.text);
+        final isAdmin = userData['isAdmin'] == true;
 
         Navigator.pushReplacement(
           context,
@@ -645,25 +644,24 @@ class _NordenLoginPageState extends State<NordenLoginPage>
           ),
         );
       }
-    } on FirebaseAuthException catch (e) {
+    } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_authService.getErrorMessage(e)),
-            backgroundColor: const Color(0xFFFF3B30),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        // If it's a network error, offer offline mode
+        if (e.code == 'NETWORK_ERROR') {
+          _showOfflineModeDialog();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_authService.getErrorMessage(e)),
+              backgroundColor: const Color(0xFFFF3B30),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('An error occurred. Please try again'),
-            backgroundColor: Color(0xFFFF3B30),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _showOfflineModeDialog();
       }
     } finally {
       if (mounted) {
@@ -672,17 +670,17 @@ class _NordenLoginPageState extends State<NordenLoginPage>
     }
   }
 
-  /// Sign in with Google using Firebase Auth
+  /// Sign in with Google using Backend Auth
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
     HapticFeedback.mediumImpact();
 
     try {
-      final userCredential = await _authService.signInWithGoogle();
+      final userData = await _authService.signInWithGoogle();
 
-      if (userCredential != null && mounted) {
+      if (userData != null && mounted) {
         // Check if user is admin
-        final isAdmin = AdminConfig.isAdmin(userCredential.user?.email);
+        final isAdmin = userData['isAdmin'] == true;
 
         Navigator.pushReplacement(
           context,
@@ -692,30 +690,86 @@ class _NordenLoginPageState extends State<NordenLoginPage>
           ),
         );
       }
-    } on FirebaseAuthException catch (e) {
+    } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_authService.getErrorMessage(e)),
-            backgroundColor: const Color(0xFFFF3B30),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        // If it's a network error, offer offline mode
+        if (e.code == 'NETWORK_ERROR') {
+          _showOfflineModeDialog();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_authService.getErrorMessage(e)),
+              backgroundColor: const Color(0xFFFF3B30),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('An error occurred with Google Sign In'),
-            backgroundColor: Color(0xFFFF3B30),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _showOfflineModeDialog();
       }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  /// Show offline mode dialog when backend is unavailable
+  void _showOfflineModeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.3)),
+        ),
+        title: Text(
+          'Server Unavailable',
+          style: GoogleFonts.playfairDisplay(
+            color: const Color(0xFFD4AF37),
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: Text(
+          'The server is currently unavailable. You can continue as a guest to browse the app, or try again later.',
+          style: GoogleFonts.inter(
+            color: Colors.white.withOpacity(0.8),
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Try Again',
+              style: GoogleFonts.inter(
+                color: const Color(0xFFD4AF37).withOpacity(0.7),
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const NordenHomePage()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD4AF37),
+              foregroundColor: Colors.black,
+            ),
+            child: Text(
+              'Continue as Guest',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

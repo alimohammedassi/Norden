@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/address_service.dart';
 import '../../models/address.dart';
-import '../../widgets/google_maps_picker.dart';
-import '../../widgets/debug_maps_picker.dart';
+import '../../widgets/simple_map_picker.dart';
 
 class AddressesPage extends StatefulWidget {
   const AddressesPage({super.key});
@@ -128,17 +127,7 @@ class _AddressesPageState extends State<AddressesPage> {
               textAlign: TextAlign.center,
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.bug_report, color: Color(0xFFD4AF37)),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const DebugMapsPicker(),
-                ),
-              );
-            },
-          ),
+          const SizedBox(width: 48), // Balance the back button
         ],
       ),
     );
@@ -252,19 +241,14 @@ class _AddressesPageState extends State<AddressesPage> {
           const SizedBox(height: 12),
           _buildAddressRow(Icons.person_outline, address.name),
           const SizedBox(height: 8),
+          _buildAddressRow(Icons.location_on_outlined, address.street),
+          const SizedBox(height: 8),
           _buildAddressRow(
-            Icons.location_on_outlined,
-            address.formattedAddress ?? address.street,
+            Icons.location_city_outlined,
+            '${address.city}, ${address.country}',
           ),
           const SizedBox(height: 8),
           _buildAddressRow(Icons.phone_outlined, address.phone),
-          if (address.latitude != null && address.longitude != null) ...[
-            const SizedBox(height: 8),
-            _buildAddressRow(
-              Icons.map,
-              'Lat: ${address.latitude!.toStringAsFixed(6)}, Lng: ${address.longitude!.toStringAsFixed(6)}',
-            ),
-          ],
         ],
       ),
     );
@@ -405,77 +389,220 @@ class _AddressesPageState extends State<AddressesPage> {
     bool isEditing = false,
     Address? editAddress,
     int? editIndex,
-  }) async {
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => GoogleMapsPicker(
-          initialLabel: editAddress?.label,
-          initialName: editAddress?.name,
-          initialPhone: editAddress?.phone,
-          initialLatitude: editAddress?.latitude,
-          initialLongitude: editAddress?.longitude,
-          initialFormattedAddress: editAddress?.formattedAddress,
-        ),
-      ),
+  }) {
+    final labelController = TextEditingController(
+      text: editAddress?.label ?? '',
+    );
+    final nameController = TextEditingController(text: editAddress?.name ?? '');
+    final phoneController = TextEditingController(
+      text: editAddress?.phone ?? '',
+    );
+    final streetController = TextEditingController(
+      text: editAddress?.street ?? '',
+    );
+    final cityController = TextEditingController(text: editAddress?.city ?? '');
+    final countryController = TextEditingController(
+      text: editAddress?.country ?? '',
     );
 
-    if (result != null) {
-      try {
-        final now = DateTime.now();
-        final address = Address(
-          id: editAddress?.id ?? now.millisecondsSinceEpoch.toString(),
-          label: result['label'],
-          name: result['name'],
-          phone: result['phone'],
-          street: result['formattedAddress'] ?? 'Selected Location',
-          city: 'Selected Location', // Will be extracted from formatted address
-          country:
-              'Selected Location', // Will be extracted from formatted address
-          latitude: result['latitude'],
-          longitude: result['longitude'],
-          formattedAddress: result['formattedAddress'],
-          isDefault: editAddress?.isDefault ?? false,
-          createdAt: editAddress?.createdAt ?? now,
-          updatedAt: now,
-        );
-
-        if (isEditing && editIndex != null) {
-          await _addressService.updateAddressByIndex(editIndex, address);
-        } else {
-          await _addressService.addAddressObject(address);
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                isEditing
-                    ? 'Address updated successfully!'
-                    : 'Address added successfully!',
-                style: GoogleFonts.inter(color: Colors.white),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.3)),
+        ),
+        title: Text(
+          isEditing ? 'Edit Address' : 'Add New Address',
+          style: GoogleFonts.playfairDisplay(
+            color: const Color(0xFFD4AF37),
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDialogTextField(
+                controller: labelController,
+                label: 'Label',
+                hint: 'Home, Work, etc.',
               ),
+              const SizedBox(height: 12),
+              _buildDialogTextField(
+                controller: nameController,
+                label: 'Full Name',
+                hint: 'John Doe',
+              ),
+              const SizedBox(height: 12),
+              _buildDialogTextField(
+                controller: phoneController,
+                label: 'Phone Number',
+                hint: '+1234567890',
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 12),
+              _buildDialogTextField(
+                controller: streetController,
+                label: 'Street Address',
+                hint: '123 Main Street',
+              ),
+              const SizedBox(height: 12),
+              _buildDialogTextField(
+                controller: cityController,
+                label: 'City',
+                hint: 'New York',
+              ),
+              const SizedBox(height: 12),
+              _buildDialogTextField(
+                controller: countryController,
+                label: 'Country',
+                hint: 'United States',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: Colors.white.withOpacity(0.6)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final address = {
+                'label': labelController.text.trim(),
+                'name': nameController.text.trim(),
+                'phone': phoneController.text.trim(),
+                'street': streetController.text.trim(),
+                'city': cityController.text.trim(),
+                'country': countryController.text.trim(),
+                'isDefault': isEditing
+                    ? (editAddress?.isDefault ?? false)
+                    : false,
+              };
+
+              try {
+                if (isEditing && editIndex != null) {
+                  print('Updating address at index $editIndex');
+                  await _addressService.updateAddressByIndex(
+                    editIndex,
+                    Address.fromJson(address),
+                  );
+                } else {
+                  print('Adding new address');
+                  await _addressService.addAddressObject(
+                    Address.fromJson(address),
+                  );
+                }
+
+                print('Address saved successfully');
+
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isEditing
+                            ? 'Address updated successfully!'
+                            : 'Address added successfully!',
+                        style: GoogleFonts.inter(color: Colors.white),
+                      ),
+                      backgroundColor: const Color(0xFFD4AF37),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } catch (e) {
+                print('Error saving address: $e');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Error saving address. Please try again.',
+                        style: GoogleFonts.inter(color: Colors.white),
+                      ),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFD4AF37),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } catch (e) {
-        print('Error saving address: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Error saving address. Please try again.',
-                style: GoogleFonts.inter(color: Colors.white),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
             ),
-          );
-        }
-      }
-    }
+            child: Text(
+              isEditing ? 'Update' : 'Add',
+              style: GoogleFonts.inter(
+                color: Colors.black,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDialogTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    TextInputType? keyboardType,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            color: const Color(0xFFD4AF37),
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: GoogleFonts.inter(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.inter(color: Colors.white.withOpacity(0.4)),
+            filled: true,
+            fillColor: const Color(0xFF2A2A2A),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: const Color(0xFFD4AF37).withOpacity(0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: const Color(0xFFD4AF37).withOpacity(0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD4AF37)),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   void _showDeleteConfirmDialog(Address address, int index) {

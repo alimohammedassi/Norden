@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../services/api_service.dart';
 import 'login&sgin in/login.dart';
 import 'home_page.dart';
-import '../services/auth_service.dart';
+import '../services/backend_auth_service.dart';
 
 // This is your separate intro page - import this into your main.dart
 class NordenIntroPage extends StatefulWidget {
@@ -18,7 +18,7 @@ class _NordenIntroPageState extends State<NordenIntroPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  final AuthService _authService = AuthService();
+  final BackendAuthService _authService = BackendAuthService();
   bool _isLoadingGuest = false;
 
   @override
@@ -43,7 +43,7 @@ class _NordenIntroPageState extends State<NordenIntroPage>
     HapticFeedback.mediumImpact();
 
     try {
-      await _authService.signInAnonymously();
+      await _authService.guestLogin();
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -51,16 +51,32 @@ class _NordenIntroPageState extends State<NordenIntroPage>
           MaterialPageRoute(builder: (context) => const NordenHomePage()),
         );
       }
-    } on FirebaseAuthException catch (e) {
+    } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _authService.getErrorMessage(e),
-              style: GoogleFonts.inter(color: Colors.white),
+        // If it's a network error, just continue as guest anyway
+        if (e.code == 'NETWORK_ERROR') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const NordenHomePage()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _authService.getErrorMessage(e),
+                style: GoogleFonts.inter(color: Colors.white),
+              ),
+              backgroundColor: const Color(0xFFFF3B30),
             ),
-            backgroundColor: const Color(0xFFFF3B30),
-          ),
+          );
+        }
+      }
+    } catch (e) {
+      // If any error occurs, just continue as guest
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const NordenHomePage()),
         );
       }
     } finally {

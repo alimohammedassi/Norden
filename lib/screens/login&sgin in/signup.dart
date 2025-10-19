@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../../services/auth_service.dart';
+import '../../services/api_service.dart';
+import '../../services/backend_auth_service.dart';
 import '../home_page.dart';
 
 class NordenSignupPage extends StatefulWidget {
@@ -23,7 +23,7 @@ class _NordenSignupPageState extends State<NordenSignupPage>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final AuthService _authService = AuthService();
+  final BackendAuthService _authService = BackendAuthService();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
@@ -678,7 +678,7 @@ class _NordenSignupPageState extends State<NordenSignupPage>
     );
   }
 
-  /// Sign up with email and password using Firebase Auth
+  /// Sign up with email and password using Backend Auth
   Future<void> _signUpWithEmail() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -699,7 +699,7 @@ class _NordenSignupPageState extends State<NordenSignupPage>
     HapticFeedback.mediumImpact();
 
     try {
-      await _authService.signUpWithEmail(
+      await _authService.register(
         email: _emailController.text,
         password: _passwordController.text,
         displayName: _nameController.text,
@@ -711,25 +711,24 @@ class _NordenSignupPageState extends State<NordenSignupPage>
           MaterialPageRoute(builder: (context) => const NordenHomePage()),
         );
       }
-    } on FirebaseAuthException catch (e) {
+    } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_authService.getErrorMessage(e)),
-            backgroundColor: const Color(0xFFFF3B30),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        // If it's a network error, offer offline mode
+        if (e.code == 'NETWORK_ERROR') {
+          _showOfflineModeDialog();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_authService.getErrorMessage(e)),
+              backgroundColor: const Color(0xFFFF3B30),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('An error occurred. Please try again'),
-            backgroundColor: Color(0xFFFF3B30),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _showOfflineModeDialog();
       }
     } finally {
       if (mounted) {
@@ -738,44 +737,100 @@ class _NordenSignupPageState extends State<NordenSignupPage>
     }
   }
 
-  /// Sign up with Google using Firebase Auth
+  /// Sign up with Google using Backend Auth
   Future<void> _signUpWithGoogle() async {
     setState(() => _isLoading = true);
     HapticFeedback.mediumImpact();
 
     try {
-      final userCredential = await _authService.signInWithGoogle();
+      final userData = await _authService.signInWithGoogle();
 
-      if (userCredential != null && mounted) {
+      if (userData != null && mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const NordenHomePage()),
         );
       }
-    } on FirebaseAuthException catch (e) {
+    } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_authService.getErrorMessage(e)),
-            backgroundColor: const Color(0xFFFF3B30),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        // If it's a network error, offer offline mode
+        if (e.code == 'NETWORK_ERROR') {
+          _showOfflineModeDialog();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_authService.getErrorMessage(e)),
+              backgroundColor: const Color(0xFFFF3B30),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('An error occurred with Google Sign In'),
-            backgroundColor: Color(0xFFFF3B30),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _showOfflineModeDialog();
       }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  /// Show offline mode dialog when backend is unavailable
+  void _showOfflineModeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.3)),
+        ),
+        title: Text(
+          'Server Unavailable',
+          style: GoogleFonts.playfairDisplay(
+            color: const Color(0xFFD4AF37),
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: Text(
+          'The server is currently unavailable. You can continue as a guest to browse the app, or try again later.',
+          style: GoogleFonts.inter(
+            color: Colors.white.withOpacity(0.8),
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Try Again',
+              style: GoogleFonts.inter(
+                color: const Color(0xFFD4AF37).withOpacity(0.7),
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const NordenHomePage()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD4AF37),
+              foregroundColor: Colors.black,
+            ),
+            child: Text(
+              'Continue as Guest',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

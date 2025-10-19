@@ -139,6 +139,18 @@ class _NordenHomePageState extends State<NordenHomePage>
   /// This will be populated from Firebase Firestore by the admin
   final List<Map<String, dynamic>> _products = [];
 
+  /// Load sample products for testing
+  void _loadSampleProducts() {
+    final sampleProducts = Product.getSampleProducts();
+    _products.clear();
+    for (final product in sampleProducts) {
+      _products.add(_productToMap(product));
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   // ============== LIFECYCLE METHODS ==============
 
   /// initState: Called once when widget is first created
@@ -156,6 +168,8 @@ class _NordenHomePageState extends State<NordenHomePage>
 
     // Load products from Firebase
     _loadFirebaseProducts();
+    // Load sample products for testing
+    _loadSampleProducts();
   }
 
   /// _onCartChanged: Callback when cart changes to update UI
@@ -309,20 +323,30 @@ class _NordenHomePageState extends State<NordenHomePage>
     };
   }
 
-  /// Load products from Firebase and update UI
+  /// Load products from backend and update UI
   void _loadFirebaseProducts() async {
     try {
       final products = await _productService.getProducts();
-      if (products.isNotEmpty && mounted) {
+      if (mounted) {
         setState(() {
-          // Clear hardcoded products and replace with Firebase products
+          // Clear hardcoded products and replace with backend products
           _products.clear();
-          _products.addAll(products.map((p) => _productToMap(p)).toList());
+          if (products.isNotEmpty) {
+            _products.addAll(products.map((p) => _productToMap(p)).toList());
+          } else {
+            // If no products from backend, load sample products as fallback
+            _loadSampleProducts();
+          }
         });
       }
     } catch (e) {
       debugPrint('Error loading products: $e');
-      // Keep hardcoded products as fallback
+      // Keep sample products as fallback
+      if (mounted) {
+        setState(() {
+          _loadSampleProducts();
+        });
+      }
     }
   }
 
@@ -1361,7 +1385,7 @@ class _VintageProductCardState extends State<_VintageProductCard> {
     final productId = widget.product['id']?.toString();
     if (productId != null && mounted) {
       setState(() {
-        _isInWishlist = widget.wishlistService.isInWishlist(productId);
+        _isInWishlist = widget.wishlistService.isInWishlistSync(productId);
       });
     }
   }

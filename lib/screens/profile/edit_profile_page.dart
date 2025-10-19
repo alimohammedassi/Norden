@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -18,8 +19,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    final user = FirebaseAuth.instance.currentUser;
-    _nameController.text = user?.displayName ?? '';
+    final user = AuthService().currentUser;
+    _nameController.text = user?['displayName'] ?? '';
   }
 
   @override
@@ -35,10 +36,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
     setState(() => _isLoading = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = AuthService().currentUser;
       if (user != null) {
-        await user.updateDisplayName(_nameController.text.trim());
-        await user.reload();
+        // TODO: Implement display name update for backend user data
+        // await user.updateDisplayName(_nameController.text.trim());
+        // await user.reload();
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
