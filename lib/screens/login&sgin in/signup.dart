@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../services/api_service.dart';
+// Removed legacy API dependency; using Firebase auth only
 import '../../services/backend_auth_service.dart';
 import '../home_page.dart';
 
@@ -711,24 +711,15 @@ class _NordenSignupPageState extends State<NordenSignupPage>
           MaterialPageRoute(builder: (context) => const NordenHomePage()),
         );
       }
-    } on ApiException catch (e) {
-      if (mounted) {
-        // If it's a network error, offer offline mode
-        if (e.code == 'NETWORK_ERROR') {
-          _showOfflineModeDialog();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_authService.getErrorMessage(e)),
-              backgroundColor: const Color(0xFFFF3B30),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
     } catch (e) {
       if (mounted) {
-        _showOfflineModeDialog();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_authService.getErrorMessage(e)),
+            backgroundColor: const Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -751,24 +742,15 @@ class _NordenSignupPageState extends State<NordenSignupPage>
           MaterialPageRoute(builder: (context) => const NordenHomePage()),
         );
       }
-    } on ApiException catch (e) {
-      if (mounted) {
-        // If it's a network error, offer offline mode
-        if (e.code == 'NETWORK_ERROR') {
-          _showOfflineModeDialog();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_authService.getErrorMessage(e)),
-              backgroundColor: const Color(0xFFFF3B30),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
     } catch (e) {
       if (mounted) {
-        _showOfflineModeDialog();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_authService.getErrorMessage(e)),
+            backgroundColor: const Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       if (mounted) {

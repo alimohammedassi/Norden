@@ -52,7 +52,6 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
         widget.initialLongitude!,
       );
     } else {
-      // Set a default location (New York City) if no initial location is provided
       _selectedLocation = const LatLng(40.7128, -74.0060);
     }
 
@@ -88,7 +87,6 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
     setState(() => _isLoading = true);
 
     try {
-      // Check if location services are enabled
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -102,7 +100,6 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
         return;
       }
 
-      // Check permission again
       final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         final requestPermission = await Geolocator.requestPermission();
@@ -212,7 +209,6 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
   }
 
   void _confirmSelection() {
-    // Validate location selection
     if (_selectedLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -226,7 +222,6 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
       return;
     }
 
-    // Validate required fields
     final label = _labelController.text.trim();
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
@@ -261,7 +256,6 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
       return;
     }
 
-    // Basic phone validation
     if (phone.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -272,7 +266,6 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
       return;
     }
 
-    // Show loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -281,11 +274,9 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
       ),
     );
 
-    // Simulate a small delay for better UX
     Future.delayed(const Duration(milliseconds: 500), () {
-      Navigator.pop(context); // Close loading dialog
+      Navigator.pop(context);
 
-      // Return the address data
       Navigator.pop(context, {
         'label': label,
         'name': name,
@@ -306,7 +297,9 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
           children: [
             _buildHeader(),
             Expanded(
-              child: Column(children: [_buildMap(), _buildAddressForm()]),
+              child: SingleChildScrollView(
+                child: Column(children: [_buildMap(), _buildAddressForm()]),
+              ),
             ),
           ],
         ),
@@ -316,40 +309,115 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A).withOpacity(0.8),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [const Color(0xFF1A1A1A), const Color(0xFF0A0A0A)],
+        ),
         border: Border(
           bottom: BorderSide(
-            color: const Color(0xFFD4AF37).withOpacity(0.2),
+            color: const Color(0xFFD4AF37).withOpacity(0.3),
             width: 1,
           ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new,
-              color: Color(0xFFD4AF37),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF2A2A2A),
+              border: Border.all(
+                color: const Color(0xFFD4AF37).withOpacity(0.3),
+                width: 1.5,
+              ),
             ),
-            onPressed: () => Navigator.pop(context),
+            child: IconButton(
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                color: Color(0xFFD4AF37),
+                size: 18,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
           Expanded(
-            child: Text(
-              'SELECT LOCATION',
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFFD4AF37),
-                letterSpacing: 2,
-              ),
-              textAlign: TextAlign.center,
+            child: Column(
+              children: [
+                Text(
+                  'SELECT LOCATION',
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFD4AF37),
+                    letterSpacing: 2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Tap on map to choose',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.5),
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.my_location, color: Color(0xFFD4AF37)),
-            onPressed: _isLoading ? null : _getCurrentLocation,
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: _isLoading
+                  ? null
+                  : const LinearGradient(
+                      colors: [Color(0xFFD4AF37), Color(0xFFB8860B)],
+                    ),
+              color: _isLoading ? const Color(0xFF2A2A2A) : null,
+              border: Border.all(
+                color: const Color(0xFFD4AF37).withOpacity(0.3),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFD4AF37).withOpacity(0.3),
+                  blurRadius: 12,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: _isLoading
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          const Color(0xFFD4AF37),
+                        ),
+                      ),
+                    )
+                  : const Icon(
+                      Icons.my_location_rounded,
+                      color: Colors.black,
+                      size: 20,
+                    ),
+              onPressed: _isLoading ? null : _getCurrentLocation,
+            ),
           ),
         ],
       ),
@@ -357,104 +425,289 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
   }
 
   Widget _buildMap() {
-    return Expanded(
-      flex: 2,
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: const Color(0xFFD4AF37).withOpacity(0.3),
-            width: 2,
-          ),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: _selectedLocation != null
-              ? GoogleMap(
-                  onMapCreated: _onMapCreated,
-                  onTap: _onMapTap,
-                  initialCameraPosition: CameraPosition(
-                    target: _selectedLocation!,
-                    zoom: 15,
-                  ),
-                  markers: {
-                    Marker(
-                      markerId: const MarkerId('selected_location'),
-                      position: _selectedLocation!,
-                      infoWindow: InfoWindow(
-                        title: 'Selected Location',
-                        snippet: _formattedAddress ?? 'Tap to select location',
+    return SizedBox(
+      height: 300, // Fixed height instead of Expanded
+      child: Stack(
+        children: [
+          Container(
+            margin: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: const Color(0xFFD4AF37).withOpacity(0.3),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFD4AF37).withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.4),
+                  blurRadius: 15,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: _selectedLocation != null
+                  ? GoogleMap(
+                      onMapCreated: _onMapCreated,
+                      onTap: _onMapTap,
+                      initialCameraPosition: CameraPosition(
+                        target: _selectedLocation!,
+                        zoom: 15,
+                      ),
+                      markers: {
+                        Marker(
+                          markerId: const MarkerId('selected_location'),
+                          position: _selectedLocation!,
+                          icon: BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueOrange,
+                          ),
+                          infoWindow: InfoWindow(
+                            title: 'Selected Location',
+                            snippet: _formattedAddress ?? 'Tap to select',
+                          ),
+                        ),
+                      },
+                      myLocationEnabled: _locationPermissionGranted,
+                      myLocationButtonEnabled: false,
+                      zoomControlsEnabled: false,
+                      mapToolbarEnabled: false,
+                    )
+                  : const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFD4AF37),
                       ),
                     ),
-                  },
-                  myLocationEnabled: _locationPermissionGranted,
-                  myLocationButtonEnabled: false,
-                  zoomControlsEnabled: false,
-                  mapToolbarEnabled: false,
-                )
-              : const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
-                ),
+            ),
+          ),
+          Positioned(
+            right: 30,
+            bottom: 30,
+            child: Column(
+              children: [
+                _buildZoomButton(Icons.add, () {
+                  _mapController?.animateCamera(CameraUpdate.zoomIn());
+                }),
+                const SizedBox(height: 8),
+                _buildZoomButton(Icons.remove, () {
+                  _mapController?.animateCamera(CameraUpdate.zoomOut());
+                }),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildZoomButton(IconData icon, VoidCallback onTap) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFF1A1A1A),
+        border: Border.all(
+          color: const Color(0xFFD4AF37).withOpacity(0.4),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Icon(icon, color: const Color(0xFFD4AF37), size: 20),
         ),
       ),
     );
   }
 
   Widget _buildAddressForm() {
-    return Expanded(
-      flex: 1,
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A).withOpacity(0.6),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: const Color(0xFFD4AF37).withOpacity(0.2),
-            width: 1,
-          ),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [const Color(0xFF1A1A1A), const Color(0xFF0F0F0F)],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Address Details',
-                  style: GoogleFonts.playfairDisplay(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFFD4AF37),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xFFD4AF37).withOpacity(0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFD4AF37).withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFD4AF37), Color(0xFFB8860B)],
                   ),
                 ),
-                const Spacer(),
-                if (_selectedLocation != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                child: const Icon(
+                  Icons.location_on_rounded,
+                  color: Colors.black,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Address Details',
+                style: GoogleFonts.playfairDisplay(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFFD4AF37),
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (_selectedLocation != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.green.withOpacity(0.2),
+                        Colors.green.withOpacity(0.1),
+                      ],
                     ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.green.withOpacity(0.6),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: Colors.green,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Selected',
+                        style: GoogleFonts.inter(
+                          color: Colors.green,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildModernTextField(
+                  controller: _labelController,
+                  label: 'Label',
+                  hint: 'Home, Work, etc.',
+                  icon: Icons.label_outline,
+                ),
+                const SizedBox(height: 16),
+                _buildModernTextField(
+                  controller: _nameController,
+                  label: 'Full Name',
+                  hint: 'John Doe',
+                  icon: Icons.person_outline,
+                ),
+                const SizedBox(height: 16),
+                _buildModernTextField(
+                  controller: _phoneController,
+                  label: 'Phone Number',
+                  hint: '+1234567890',
+                  icon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+                if (_formattedAddress != null)
+                  Container(
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.green, width: 1),
+                      color: const Color(0xFF2A2A2A),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFD4AF37).withOpacity(0.3),
+                        width: 1,
+                      ),
                     ),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.check_circle,
-                          color: Colors.green,
-                          size: 16,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFFD4AF37).withOpacity(0.2),
+                          ),
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Color(0xFFD4AF37),
+                            size: 18,
+                          ),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Location Selected',
-                          style: GoogleFonts.inter(
-                            color: Colors.green,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Selected Address',
+                                style: GoogleFonts.inter(
+                                  color: const Color(0xFFD4AF37),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _formattedAddress!,
+                                style: GoogleFonts.inter(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 13,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -462,128 +715,65 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
                   ),
               ],
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _buildTextField(
-                      controller: _labelController,
-                      label: 'Label',
-                      hint: 'Home, Work, etc.',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      controller: _nameController,
-                      label: 'Full Name',
-                      hint: 'John Doe',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      controller: _phoneController,
-                      label: 'Phone Number',
-                      hint: '+1234567890',
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 12),
-                    // Instructions
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2A2A2A).withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: const Color(0xFFD4AF37).withOpacity(0.2),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.info_outline,
-                            color: Color(0xFFD4AF37),
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Tap anywhere on the map above to select your location',
-                              style: GoogleFonts.inter(
-                                color: Colors.white.withOpacity(0.8),
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_formattedAddress != null)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2A2A2A),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFFD4AF37).withOpacity(0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.location_on,
-                              color: Color(0xFFD4AF37),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _formattedAddress!,
-                                style: GoogleFonts.inter(
-                                  color: Colors.white.withOpacity(0.8),
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            height: 56,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFD4AF37), Color(0xFFB8860B)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFD4AF37).withOpacity(0.4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: _confirmSelection,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _confirmSelection,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFD4AF37),
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.black,
+                    size: 22,
                   ),
-                ),
-                child: Text(
-                  'CONFIRM LOCATION',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
+                  const SizedBox(width: 12),
+                  Text(
+                    'CONFIRM LOCATION',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5,
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildModernTextField({
     required TextEditingController controller,
     required String label,
     required String hint,
+    required IconData icon,
     TextInputType? keyboardType,
   }) {
     return Column(
@@ -593,39 +783,69 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
           label,
           style: GoogleFonts.inter(
             color: const Color(0xFFD4AF37),
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
           ),
         ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          keyboardType: keyboardType,
-          style: GoogleFonts.inter(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: GoogleFonts.inter(color: Colors.white.withOpacity(0.4)),
-            filled: true,
-            fillColor: const Color(0xFF2A2A2A),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: const Color(0xFFD4AF37).withOpacity(0.3),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
+            ],
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: const Color(0xFFD4AF37).withOpacity(0.3),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: GoogleFonts.inter(
+                color: Colors.white.withOpacity(0.3),
+                fontSize: 14,
               ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFD4AF37)),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
+              prefixIcon: Icon(
+                icon,
+                color: const Color(0xFFD4AF37).withOpacity(0.6),
+                size: 20,
+              ),
+              filled: true,
+              fillColor: const Color(0xFF2A2A2A),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: const Color(0xFFD4AF37).withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: const Color(0xFFD4AF37).withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: Color(0xFFD4AF37),
+                  width: 2,
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
             ),
           ),
         ),

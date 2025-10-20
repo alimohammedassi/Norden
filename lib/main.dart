@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/home_page.dart';
 import 'screens/NordenIntroPage.dart';
@@ -8,6 +9,12 @@ import 'services/backend_auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    // If Firebase isn't configured yet, continue without crashing so the app can start
+    debugPrint('Firebase init error: $e');
+  }
 
   // Initialize backend auth service with timeout
   final authService = BackendAuthService();
@@ -147,10 +154,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                   SizedBox(height: 16),
                   Text(
                     'Loading...',
-                    style: TextStyle(
-                      color: Color(0xFFD4AF37),
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(color: Color(0xFFD4AF37), fontSize: 16),
                   ),
                 ],
               ),

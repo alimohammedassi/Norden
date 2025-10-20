@@ -1,180 +1,213 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/cart_item.dart';
-import 'backend_cart_service.dart';
 
-/// Cart service wrapper for backward compatibility
+/// Simple local cart model
+class Cart {
+  final List<CartItem> items;
+  final double subtotal;
+  final double tax;
+  final double shipping;
+  final double total;
+  Cart({
+    required this.items,
+    required this.subtotal,
+    required this.tax,
+    required this.shipping,
+    required this.total,
+  });
+}
+
+/// Cart service using local storage (no backend)
 class CartService with ChangeNotifier {
   static final CartService _instance = CartService._internal();
   factory CartService() => _instance;
   CartService._internal();
 
-  final BackendCartService _backendCart = BackendCartService();
+  static const String _prefsKey = 'local_cart_v1';
 
-  // Local cache for cart data
-  Cart? _cart;
-  List<CartItem> _items = [];
+  final List<CartItem> _items = [];
   double _subtotal = 0.0;
   double _tax = 0.0;
   double _shipping = 0.0;
   double _total = 0.0;
-  int _itemCount = 0;
 
-  // Getters for backward compatibility
-  List<CartItem> get items => _items;
+  List<CartItem> get items => List.unmodifiable(_items);
   double get subtotal => _subtotal;
   double get tax => _tax;
   double get shipping => _shipping;
   double get total => _total;
-  int get itemCount => _itemCount;
+  int get itemCount => _items.fold<int>(0, (sum, item) => sum + item.quantity);
 
-  /// Load cart data and update local cache
-  Future<void> _loadCart() async {
+  Future<void> _persist() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = _items.map((e) => e.toJson()).toList();
+    await prefs.setString(_prefsKey, jsonEncode(jsonList));
+  }
+
+  Future<void> _load() async {
     try {
-      _cart = await _backendCart.getCart();
-      _items = _cart?.items ?? [];
-      _subtotal = _cart?.subtotal ?? 0.0;
-      _tax = _cart?.tax ?? 0.0;
-      _shipping = _cart?.shipping ?? 0.0;
-      _total = _cart?.total ?? 0.0;
-      _itemCount = _items.fold<int>(0, (sum, item) => sum + item.quantity);
+      final prefs = await SharedPreferences.getInstance();
+      final data = prefs.getString(_prefsKey);
+      _items.clear();
+      if (data != null && data.isNotEmpty) {
+        final List<dynamic> list = jsonDecode(data);
+        for (final item in list) {
+          _items.add(CartItem.fromJson(item as Map<String, dynamic>));
+        }
+      }
+      _recalculate();
       notifyListeners();
     } catch (e) {
-      debugPrint('Error loading cart: $e');
+      debugPrint('Cart load error: $e');
     }
   }
 
-  /// Get user's cart
+  void _recalculate() {
+    _subtotal = _items.fold<double>(0.0, (s, it) => s + it.totalPrice);
+    _tax = (_subtotal * 0.0);
+    _shipping = _items.isEmpty ? 0.0 : 0.0;
+    _total = _subtotal + _tax + _shipping;
+  }
+
   Future<Cart> getCart() async {
-    try {
-      return await _backendCart.getCart();
-    } catch (e) {
-      debugPrint('Error getting cart: $e');
-      rethrow;
-    }
+    await _load();
+    return Cart(
+      items: List.unmodifiable(_items),
+      subtotal: _subtotal,
+      tax: _tax,
+      shipping: _shipping,
+      total: _total,
+    );
   }
 
-  /// Add item to cart
   Future<void> addToCart({
     required String productId,
     required int quantity,
     required String selectedColor,
     required String selectedSize,
+    String? productName,
+    double? price,
+    String? imageUrl,
   }) async {
-    try {
-      await _backendCart.addToCart(
-        productId: productId,
-        quantity: quantity,
-        selectedColor: selectedColor,
-        selectedSize: selectedSize,
+    final now = DateTime.now();
+    final existingIndex = _items.indexWhere(
+      (it) =>
+          it.productId == productId &&
+          it.selectedColor == selectedColor &&
+          it.selectedSize == selectedSize,
+    );
+    if (existingIndex >= 0) {
+      final existing = _items[existingIndex];
+      _items[existingIndex] = existing.copyWith(
+        quantity: existing.quantity + quantity,
+        updatedAt: now,
       );
-    } catch (e) {
-      debugPrint('Error adding to cart: $e');
-      rethrow;
+    } else {
+      _items.add(
+        CartItem(
+          id: '${productId}_${selectedColor}_${selectedSize}_$now',
+          productId: productId,
+          productName: productName ?? 'Product',
+          price: price ?? 0.0,
+          quantity: quantity,
+          selectedColor: selectedColor,
+          selectedSize: selectedSize,
+          imageUrl: imageUrl ?? '',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
     }
+    _recalculate();
+    await _persist();
+    notifyListeners();
   }
 
-  /// Update cart item quantity
   Future<void> updateCartItem({
     required String cartItemId,
     required int quantity,
   }) async {
-    try {
-      await _backendCart.updateCartItem(
-        cartItemId: cartItemId,
+    final index = _items.indexWhere((it) => it.id == cartItemId);
+    if (index >= 0) {
+      _items[index] = _items[index].copyWith(
         quantity: quantity,
+        updatedAt: DateTime.now(),
       );
-    } catch (e) {
-      debugPrint('Error updating cart item: $e');
-      rethrow;
+      _recalculate();
+      await _persist();
+      notifyListeners();
     }
   }
 
-  /// Remove item from cart
   Future<void> removeFromCart(String cartItemId) async {
-    try {
-      await _backendCart.removeFromCart(cartItemId);
-    } catch (e) {
-      debugPrint('Error removing from cart: $e');
-      rethrow;
-    }
+    _items.removeWhere((it) => it.id == cartItemId);
+    _recalculate();
+    await _persist();
+    notifyListeners();
   }
 
-  /// Clear entire cart
   Future<void> clearCart() async {
-    try {
-      await _backendCart.clearCart();
-    } catch (e) {
-      debugPrint('Error clearing cart: $e');
-      rethrow;
-    }
+    _items.clear();
+    _recalculate();
+    await _persist();
+    notifyListeners();
   }
 
-  /// Get cart item count
   Future<int> getCartItemCount() async {
-    try {
-      return await _backendCart.getCartItemCount();
-    } catch (e) {
-      debugPrint('Error getting cart item count: $e');
-      return 0;
-    }
+    await _load();
+    return itemCount;
   }
 
-  /// Check if product is in cart
   Future<bool> isProductInCart(String productId) async {
-    try {
-      return await _backendCart.isProductInCart(productId);
-    } catch (e) {
-      debugPrint('Error checking if product in cart: $e');
-      return false;
-    }
+    await _load();
+    return _items.any((it) => it.productId == productId);
   }
 
-  /// Get cart item for specific product
   Future<CartItem?> getCartItemForProduct(String productId) async {
+    await _load();
     try {
-      return await _backendCart.getCartItemForProduct(productId);
-    } catch (e) {
-      debugPrint('Error getting cart item for product: $e');
+      return _items.firstWhere((it) => it.productId == productId);
+    } catch (_) {
       return null;
     }
   }
 
-  /// Add item to cart (alternative method name expected by UI)
+  // Aliases used by UI
   Future<void> addItem({
     required String productId,
     required int quantity,
     required String selectedColor,
     required String selectedSize,
+    String? productName,
+    double? price,
+    String? imageUrl,
   }) async {
     await addToCart(
       productId: productId,
       quantity: quantity,
       selectedColor: selectedColor,
       selectedSize: selectedSize,
+      productName: productName,
+      price: price,
+      imageUrl: imageUrl,
     );
-    await _loadCart();
   }
 
-  /// Update quantity (alternative method name expected by UI)
   Future<void> updateQuantity(String cartItemId, int quantity) async {
     await updateCartItem(cartItemId: cartItemId, quantity: quantity);
-    await _loadCart();
   }
 
-  /// Remove item (alternative method name expected by UI)
   Future<void> removeItem(String cartItemId) async {
     await removeFromCart(cartItemId);
-    await _loadCart();
   }
 
-  /// Clear cart (alternative method name expected by UI)
   Future<void> clear() async {
     await clearCart();
-    await _loadCart();
   }
 
-  /// Initialize cart service
   Future<void> initialize() async {
-    await _loadCart();
+    await _load();
   }
 }

@@ -1,119 +1,107 @@
+import 'dart:async';
+// ignore_for_file: unused_import
 import 'package:flutter/foundation.dart';
 import '../models/product.dart';
-import 'backend_product_service.dart';
 
-/// Product service wrapper for backward compatibility
+/// Product service using local static data (no backend)
 class ProductService {
   static final ProductService _instance = ProductService._internal();
   factory ProductService() => _instance;
   ProductService._internal();
 
-  final BackendProductService _backendProduct = BackendProductService();
+  final List<Product> _allProducts = Product.getSampleProducts();
 
-  /// Get all products stream
-  Stream<List<Product>> getProductsStream() {
-    return _backendProduct.getProductsStream();
+  /// Get all products stream (periodic yield for UI compatibility)
+  Stream<List<Product>> getProductsStream() async* {
+    while (true) {
+      yield _allProducts;
+      await Future.delayed(const Duration(seconds: 30));
+    }
+  }
+
+  /// Admin: Add a new product locally
+  Future<String> addProduct(Product product) async {
+    final String newId = product.id.isNotEmpty
+        ? product.id
+        : DateTime.now().millisecondsSinceEpoch.toString();
+    final now = DateTime.now();
+    final newProduct = product.copyWith(
+      id: newId,
+      createdAt: product.createdAt,
+      updatedAt: now,
+    );
+    _allProducts.add(newProduct);
+    return newId;
+  }
+
+  /// Admin: Update an existing product locally
+  Future<void> updateProduct(String id, Product product) async {
+    final index = _allProducts.indexWhere((p) => p.id == id);
+    if (index >= 0) {
+      _allProducts[index] = product.copyWith(id: id, updatedAt: DateTime.now());
+    }
+  }
+
+  /// Admin: Delete a product locally
+  Future<void> deleteProduct(String id) async {
+    _allProducts.removeWhere((p) => p.id == id);
   }
 
   /// Get all products (one-time fetch)
   Future<List<Product>> getProducts() async {
-    try {
-      return await _backendProduct.getProducts();
-    } catch (e) {
-      debugPrint('Error getting products: $e');
-      rethrow;
-    }
+    return _allProducts;
   }
 
   /// Get product by ID
   Future<Product?> getProduct(String id) async {
     try {
-      return await _backendProduct.getProduct(id);
-    } catch (e) {
-      debugPrint('Error getting product: $e');
+      return _allProducts.firstWhere((p) => p.id == id);
+    } catch (_) {
       return null;
     }
   }
 
-  /// Add new product (Admin only)
-  Future<String> addProduct(Product product) async {
-    // Note: This would need to be implemented in the backend API
-    // For now, throw an exception
-    throw UnimplementedError(
-      'Product creation not yet implemented in backend API',
-    );
-  }
-
-  /// Update product (Admin only)
-  Future<void> updateProduct(String id, Product product) async {
-    // Note: This would need to be implemented in the backend API
-    // For now, throw an exception
-    throw UnimplementedError(
-      'Product update not yet implemented in backend API',
-    );
-  }
-
-  /// Delete product (Admin only)
-  Future<void> deleteProduct(String id) async {
-    // Note: This would need to be implemented in the backend API
-    // For now, throw an exception
-    throw UnimplementedError(
-      'Product deletion not yet implemented in backend API',
-    );
-  }
-
-  /// Search products
+  /// Search products by name/description
   Future<List<Product>> searchProducts(String query) async {
-    try {
-      return await _backendProduct.searchProducts(query: query);
-    } catch (e) {
-      debugPrint('Error searching products: $e');
-      return [];
-    }
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return _allProducts;
+    return _allProducts
+        .where(
+          (p) =>
+              p.name.toLowerCase().contains(q) ||
+              p.description.toLowerCase().contains(q),
+        )
+        .toList();
   }
 
   /// Get featured products
   Future<List<Product>> getFeaturedProducts() async {
-    try {
-      return await _backendProduct.getFeaturedProducts();
-    } catch (e) {
-      debugPrint('Error getting featured products: $e');
-      return [];
-    }
+    return _allProducts.where((p) => p.isFeatured).toList();
   }
 
   /// Get new products
   Future<List<Product>> getNewProducts() async {
-    try {
-      return await _backendProduct.getNewProducts();
-    } catch (e) {
-      debugPrint('Error getting new products: $e');
-      return [];
-    }
+    return _allProducts.where((p) => p.isNew).toList();
   }
 
   /// Get products by category
   Future<List<Product>> getProductsByCategory(String category) async {
-    try {
-      return await _backendProduct.getProductsByCategory(category);
-    } catch (e) {
-      debugPrint('Error getting products by category: $e');
-      return [];
-    }
+    final c = category.trim().toLowerCase();
+    return _allProducts.where((p) => p.category.toLowerCase() == c).toList();
   }
 
   /// Get available categories
   List<String> getCategories() {
-    return _backendProduct.getCategories();
+    return _allProducts.map((p) => p.category).toSet().toList();
   }
 
-  /// Get available colors
+  /// Get available colors (union of all)
   List<String> getColors() {
-    return _backendProduct.getColors();
+    return _allProducts.expand((p) => p.colors).toSet().toList();
   }
 
-  /// Get available sizes
+  /// Get available sizes (union of all)
   List<String> getSizes() {
-    return _backendProduct.getSizes();
+    return _allProducts.expand((p) => p.sizes).toSet().toList();
   }
 }

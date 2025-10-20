@@ -480,20 +480,24 @@ class _NordenHomePageState extends State<NordenHomePage>
                 // Product count and filter button
                 SliverToBoxAdapter(child: _buildProductCountSection()),
 
-                // Product grid with 2 columns
+                // Product grid with 2 columns (light minimal cards)
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverGrid(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          childAspectRatio: 0.75,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 20,
+                          childAspectRatio: 0.78,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 14,
                         ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final product = _filteredProducts[index];
-                      return _buildVintageProductCard(product, index);
+                      return _MinimalProductCard(
+                        product: product,
+                        onTap: () => _navigateToProductDetails(product),
+                        wishlistService: _wishlistService,
+                      );
                     }, childCount: _filteredProducts.length),
                   ),
                 ),
@@ -1761,6 +1765,220 @@ class _VintageProductCardState extends State<_VintageProductCard> {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Dark theme product card matching reference style
+class _MinimalProductCard extends StatefulWidget {
+  final Map<String, dynamic> product;
+  final VoidCallback onTap;
+  final WishlistService wishlistService;
+
+  const _MinimalProductCard({
+    required this.product,
+    required this.onTap,
+    required this.wishlistService,
+  });
+
+  @override
+  State<_MinimalProductCard> createState() => _MinimalProductCardState();
+}
+
+class _MinimalProductCardState extends State<_MinimalProductCard> {
+  bool _isInWishlist = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncWish();
+    widget.wishlistService.addListener(_syncWish);
+  }
+
+  @override
+  void dispose() {
+    widget.wishlistService.removeListener(_syncWish);
+    super.dispose();
+  }
+
+  void _syncWish() {
+    final id = widget.product['id']?.toString();
+    if (id != null && mounted) {
+      setState(
+        () => _isInWishlist = widget.wishlistService.isInWishlistSync(id),
+      );
+    }
+  }
+
+  Future<void> _toggleWishlist() async {
+    final id = widget.product['id']?.toString();
+    if (id == null) return;
+    if (_isInWishlist) {
+      await widget.wishlistService.removeFromWishlist(id);
+    } else {
+      await widget.wishlistService.addToWishlist(id);
+    }
+  }
+
+  Widget _image(String path) {
+    if (path.startsWith('http')) {
+      return Image.network(path, fit: BoxFit.cover);
+    }
+    return Image.asset(path, fit: BoxFit.cover);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.product;
+
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFFD4AF37).withOpacity(0.15),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: const Color(0xFFD4AF37).withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // image + heart + price pill
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(20),
+                      ),
+                      child: _image(p['image']),
+                    ),
+                  ),
+                  Positioned(
+                    right: 10,
+                    top: 10,
+                    child: GestureDetector(
+                      onTap: _toggleWishlist,
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1A1A).withOpacity(0.9),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFD4AF37).withOpacity(0.3),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          _isInWishlist
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          size: 16,
+                          color: _isInWishlist
+                              ? const Color(0xFFFF3B30)
+                              : const Color(0xFFD4AF37),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 10,
+                    bottom: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0A0A0A),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFFD4AF37).withOpacity(0.2),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        '\$${(p['price'] ?? 0).toStringAsFixed(0)}',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFFD4AF37),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    p['name'] ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.star_rounded,
+                        size: 14,
+                        color: Color(0xFFD4AF37),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        (p['rating'] ?? 4.8).toString(),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: const Color(0xFFD4AF37).withOpacity(0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],

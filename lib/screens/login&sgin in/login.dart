@@ -7,7 +7,7 @@ import '../home_page.dart';
 import '../admin/admin_dashboard.dart';
 import '../NordenIntroPage.dart';
 import '../../services/backend_auth_service.dart';
-import '../../services/api_service.dart';
+// Removed legacy API dependency; using Firebase auth only
 
 class NordenLoginPage extends StatefulWidget {
   const NordenLoginPage({super.key});
@@ -644,24 +644,15 @@ class _NordenLoginPageState extends State<NordenLoginPage>
           ),
         );
       }
-    } on ApiException catch (e) {
-      if (mounted) {
-        // If it's a network error, offer offline mode
-        if (e.code == 'NETWORK_ERROR') {
-          _showOfflineModeDialog();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_authService.getErrorMessage(e)),
-              backgroundColor: const Color(0xFFFF3B30),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
     } catch (e) {
       if (mounted) {
-        _showOfflineModeDialog();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_authService.getErrorMessage(e)),
+            backgroundColor: const Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -690,24 +681,15 @@ class _NordenLoginPageState extends State<NordenLoginPage>
           ),
         );
       }
-    } on ApiException catch (e) {
-      if (mounted) {
-        // If it's a network error, offer offline mode
-        if (e.code == 'NETWORK_ERROR') {
-          _showOfflineModeDialog();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_authService.getErrorMessage(e)),
-              backgroundColor: const Color(0xFFFF3B30),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
     } catch (e) {
       if (mounted) {
-        _showOfflineModeDialog();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_authService.getErrorMessage(e)),
+            backgroundColor: const Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       if (mounted) {

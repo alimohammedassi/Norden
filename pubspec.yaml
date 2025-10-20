@@ -36,7 +36,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_fonts: ^6.1.0
   
-  # HTTP client for API calls
+  # Firebase (aligned to compatible stable versions)
+  firebase_core: ^3.7.0
+  firebase_auth: ^5.7.0
+
+  # HTTP client for API calls (can be removed later if unused)
   http: ^1.1.0
   
   # Local storage for tokens and user data
@@ -56,6 +60,12 @@ dependencies:
   
   # Google Sign-In (still needed for OAuth)
   google_sign_in: ^6.2.2
+  
+  # Slide to act package
+  slide_to_act: ^2.0.2
+  
+  # Flip card package for Visa card effect
+  flutter_flip_card: ^0.0.6
 
 dev_dependencies:
   flutter_test:

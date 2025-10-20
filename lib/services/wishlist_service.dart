@@ -1,122 +1,120 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/wishlist_item.dart';
-import 'backend_wishlist_service.dart';
+import 'product_service.dart';
 
-/// Wishlist service wrapper for backward compatibility
+/// Wishlist service using local storage (no backend)
 class WishlistService with ChangeNotifier {
   static final WishlistService _instance = WishlistService._internal();
   factory WishlistService() => _instance;
   WishlistService._internal();
 
-  final BackendWishlistService _backendWishlist = BackendWishlistService();
+  static const String _prefsKey = 'local_wishlist_v1';
 
-  // Local cache
   List<WishlistItem> _wishlistItems = [];
   Set<String> _wishlistProductIds = {};
 
-  /// Get user's wishlist
+  Future<void> _persist() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = _wishlistItems.map((e) => e.toJson()).toList();
+    await prefs.setString(_prefsKey, jsonEncode(jsonList));
+  }
+
+  Future<void> loadWishlist() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final data = prefs.getString(_prefsKey);
+      _wishlistItems = [];
+      if (data != null && data.isNotEmpty) {
+        final List<dynamic> list = jsonDecode(data);
+        _wishlistItems = list
+            .map((e) => WishlistItem.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      _wishlistProductIds = _wishlistItems.map((e) => e.productId).toSet();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Wishlist load error: $e');
+    }
+  }
+
   Future<List<WishlistItem>> getWishlist() async {
-    try {
-      return await _backendWishlist.getWishlist();
-    } catch (e) {
-      debugPrint('Error getting wishlist: $e');
-      return [];
-    }
+    await loadWishlist();
+    return _wishlistItems;
   }
 
-  /// Add product to wishlist
   Future<void> addToWishlist(String productId) async {
-    try {
-      await _backendWishlist.addToWishlist(productId);
-    } catch (e) {
-      debugPrint('Error adding to wishlist: $e');
-      rethrow;
-    }
+    if (_wishlistProductIds.contains(productId)) return;
+    final now = DateTime.now();
+    // Try to enrich wishlist entry with product info
+    final product = await ProductService().getProduct(productId);
+    _wishlistItems.add(
+      WishlistItem(
+        id: 'w_$productId',
+        productId: productId,
+        productName: product?.name ?? 'Product',
+        price: product?.price ?? 0.0,
+        imageUrl: (product?.images.isNotEmpty == true)
+            ? product!.images.first
+            : '',
+        category: product?.category ?? '',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    _wishlistProductIds.add(productId);
+    await _persist();
+    notifyListeners();
   }
 
-  /// Remove product from wishlist
   Future<void> removeFromWishlist(String productId) async {
-    try {
-      await _backendWishlist.removeFromWishlist(productId);
-    } catch (e) {
-      debugPrint('Error removing from wishlist: $e');
-      rethrow;
-    }
+    _wishlistItems.removeWhere((e) => e.productId == productId);
+    _wishlistProductIds.remove(productId);
+    await _persist();
+    notifyListeners();
   }
 
-  /// Check if product is in wishlist
   Future<bool> isInWishlist(String productId) async {
-    try {
-      return await _backendWishlist.isInWishlist(productId);
-    } catch (e) {
-      debugPrint('Error checking wishlist status: $e');
-      return false;
-    }
+    await loadWishlist();
+    return _wishlistProductIds.contains(productId);
   }
 
-  /// Get wishlist count
+  int getWishlistCountSync() => _wishlistItems.length;
+
   Future<int> getWishlistCount() async {
-    try {
-      return await _backendWishlist.getWishlistCount();
-    } catch (e) {
-      debugPrint('Error getting wishlist count: $e');
-      return 0;
-    }
+    await loadWishlist();
+    return _wishlistItems.length;
   }
 
-  /// Check if product is in wishlist (synchronous version for UI)
   bool isInWishlistSync(String productId) {
     return _wishlistProductIds.contains(productId);
   }
 
-  /// Load wishlist data
-  Future<void> loadWishlist() async {
-    try {
-      final wishlist = await _backendWishlist.getWishlist();
-      _wishlistItems = wishlist;
-      _wishlistProductIds = wishlist.map((item) => item.productId).toSet();
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error loading wishlist: $e');
-    }
-  }
-
-  /// Clear entire wishlist
   Future<void> clearWishlist() async {
-    try {
-      await _backendWishlist.clearWishlist();
-    } catch (e) {
-      debugPrint('Error clearing wishlist: $e');
-      rethrow;
-    }
+    _wishlistItems.clear();
+    _wishlistProductIds.clear();
+    await _persist();
+    notifyListeners();
   }
 
-  /// Toggle wishlist status (add if not present, remove if present)
   Future<bool> toggleWishlist(String productId) async {
-    try {
-      return await _backendWishlist.toggleWishlist(productId);
-    } catch (e) {
-      debugPrint('Error toggling wishlist: $e');
-      rethrow;
+    if (_wishlistProductIds.contains(productId)) {
+      await removeFromWishlist(productId);
+      return false;
+    } else {
+      await addToWishlist(productId);
+      return true;
     }
   }
 
-  /// Get wishlist products stream (for UI compatibility)
   Stream<List<WishlistItem>> getWishlistProductsStream() async* {
     while (true) {
-      try {
-        yield _wishlistItems;
-        await Future.delayed(
-          const Duration(seconds: 5),
-        ); // Poll every 5 seconds
-      } catch (e) {
-        debugPrint('Error in wishlist stream: $e');
-        await Future.delayed(const Duration(seconds: 5));
-      }
+      yield _wishlistItems;
+      await Future.delayed(const Duration(seconds: 5));
     }
   }
 
-  /// Initialize wishlist service
   Future<void> initialize() async {
     await loadWishlist();
   }

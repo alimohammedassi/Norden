@@ -1,17 +1,18 @@
 import 'dart:async';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
-import '../config/api_config.dart';
-import 'api_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'token_manager.dart';
 
-/// Authentication service using the custom backend API
+/// Authentication service using Firebase Auth
 class BackendAuthService {
   static final BackendAuthService _instance = BackendAuthService._internal();
   factory BackendAuthService() => _instance;
   BackendAuthService._internal();
 
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  FirebaseAuth? _firebaseAuth; // Initialized after Firebase.initializeApp()
   final TokenManager _tokenManager = TokenManager();
 
   // Stream controller for auth state changes
@@ -29,19 +30,42 @@ class BackendAuthService {
   /// Initialize auth service
   Future<void> init() async {
     await _tokenManager.init();
-
     try {
-      // Check if user is already logged in
-      if (await _tokenManager.isLoggedIn()) {
-        final userData = await _tokenManager.getUserData();
-        _currentUser = userData;
-        _authStateController.add(_currentUser);
-      } else {
-        _authStateController.add(null);
+      // Ensure Firebase is initialized
+      try {
+        Firebase.app();
+      } catch (_) {
+        await Firebase.initializeApp();
       }
+
+      // Bind FirebaseAuth now that Firebase is initialized
+      _firebaseAuth = FirebaseAuth.instance;
+
+      // Listen to Firebase auth changes and map to our user map
+      _firebaseAuth!.authStateChanges().listen((user) async {
+        if (user == null) {
+          _currentUser = null;
+          _authStateController.add(null);
+          return;
+        }
+
+        final idToken = await user.getIdToken() ?? '';
+        final data = {
+          'userId': user.uid,
+          'email': user.email,
+          'displayName': user.displayName,
+          'isGuest': false,
+          'isAdmin': false,
+          'token': idToken,
+        };
+
+        await _tokenManager.saveTokens(idToken, '');
+        await _tokenManager.saveUserData(data);
+        _currentUser = data;
+        _authStateController.add(_currentUser);
+      });
     } catch (e) {
       debugPrint('Auth service init error: $e');
-      // If there's any error during init, just show login screen
       _authStateController.add(null);
     }
   }
@@ -97,25 +121,29 @@ class BackendAuthService {
     String? phoneNumber,
   }) async {
     try {
-      final response = await ApiService.post(
-        '${ApiConfig.authEndpoint}/register',
-        body: {
-          'email': email.trim(),
-          'password': password,
-          'displayName': displayName,
-          if (phoneNumber != null) 'phoneNumber': phoneNumber,
-        },
+      if (_firebaseAuth == null) {
+        throw FirebaseException(plugin: 'core', code: 'no-app');
+      }
+      final credential = await _firebaseAuth!.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
       );
+      await credential.user!.updateDisplayName(displayName);
+      final idToken = await credential.user!.getIdToken() ?? '';
 
-      final data = response['data'] as Map<String, dynamic>;
+      final data = {
+        'userId': credential.user!.uid,
+        'email': credential.user!.email,
+        'displayName': credential.user!.displayName,
+        'isGuest': false,
+        'isAdmin': false,
+        'token': idToken,
+      };
 
-      // Save tokens and user data
-      await _tokenManager.saveTokens(data['token'], data['refreshToken']);
+      await _tokenManager.saveTokens(idToken, '');
       await _tokenManager.saveUserData(data);
-
       _currentUser = data;
       _authStateController.add(_currentUser);
-
       return data;
     } catch (e) {
       debugPrint('Register error: $e');
@@ -129,20 +157,26 @@ class BackendAuthService {
     required String password,
   }) async {
     try {
-      final response = await ApiService.post(
-        '${ApiConfig.authEndpoint}/login',
-        body: {'email': email.trim(), 'password': password},
+      if (_firebaseAuth == null) {
+        throw FirebaseException(plugin: 'core', code: 'no-app');
+      }
+      final credential = await _firebaseAuth!.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
       );
-
-      final data = response['data'] as Map<String, dynamic>;
-
-      // Save tokens and user data
-      await _tokenManager.saveTokens(data['token'], data['refreshToken']);
+      final idToken = await credential.user!.getIdToken() ?? '';
+      final data = {
+        'userId': credential.user!.uid,
+        'email': credential.user!.email,
+        'displayName': credential.user!.displayName,
+        'isGuest': false,
+        'isAdmin': false,
+        'token': idToken,
+      };
+      await _tokenManager.saveTokens(idToken, '');
       await _tokenManager.saveUserData(data);
-
       _currentUser = data;
       _authStateController.add(_currentUser);
-
       return data;
     } catch (e) {
       debugPrint('Login error: $e');
@@ -165,25 +199,28 @@ class BackendAuthService {
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      if (googleAuth.idToken == null) {
-        throw ApiException('GOOGLE_ERROR', 'Failed to get Google ID token');
-      }
-
-      // Send ID token to backend
-      final response = await ApiService.post(
-        '${ApiConfig.authEndpoint}/google',
-        body: {'idToken': googleAuth.idToken},
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
+      if (_firebaseAuth == null) {
+        throw FirebaseException(plugin: 'core', code: 'no-app');
+      }
+      final userCred = await _firebaseAuth!.signInWithCredential(credential);
 
-      final data = response['data'] as Map<String, dynamic>;
-
-      // Save tokens and user data
-      await _tokenManager.saveTokens(data['token'], data['refreshToken'] ?? '');
+      final idToken = await userCred.user!.getIdToken() ?? '';
+      final data = {
+        'userId': userCred.user!.uid,
+        'email': userCred.user!.email,
+        'displayName': userCred.user!.displayName,
+        'isGuest': false,
+        'isAdmin': false,
+        'token': idToken,
+      };
+      await _tokenManager.saveTokens(idToken, '');
       await _tokenManager.saveUserData(data);
-
       _currentUser = data;
       _authStateController.add(_currentUser);
-
       return data;
     } catch (e) {
       debugPrint('Google sign in error: $e');
@@ -194,29 +231,14 @@ class BackendAuthService {
   /// Refresh access token
   Future<String?> refreshToken() async {
     try {
-      final refreshToken = await _tokenManager.getRefreshToken();
-      if (refreshToken == null || refreshToken.isEmpty) {
-        return null;
-      }
-
-      final response = await ApiService.post(
-        '${ApiConfig.authEndpoint}/refresh',
-        body: {'refreshToken': refreshToken},
-      );
-
-      final data = response['data'] as Map<String, dynamic>;
-
-      // Save new tokens
-      await _tokenManager.saveTokens(data['token'], data['refreshToken']);
-      await _tokenManager.saveUserData(data);
-
-      _currentUser = data;
-      _authStateController.add(_currentUser);
-
-      return data['token'];
+      if (_firebaseAuth == null) return null;
+      final user = _firebaseAuth!.currentUser;
+      if (user == null) return null;
+      final idToken = await user.getIdToken(true) ?? '';
+      await _tokenManager.saveTokens(idToken, '');
+      return idToken;
     } catch (e) {
       debugPrint('Token refresh error: $e');
-      // If refresh fails, logout user
       await logout();
       return null;
     }
@@ -225,27 +247,14 @@ class BackendAuthService {
   /// Logout user
   Future<void> logout() async {
     try {
-      final accessToken = await _tokenManager.getAccessToken();
-      final refreshToken = await _tokenManager.getRefreshToken();
-
-      if (accessToken != null) {
-        // Call logout endpoint
-        await ApiService.post(
-          '${ApiConfig.authEndpoint}/logout',
-          headers: {
-            'Authorization': 'Bearer $accessToken',
-            if (refreshToken != null) 'X-Refresh-Token': refreshToken,
-          },
-        );
+      if (_firebaseAuth != null) {
+        await _firebaseAuth!.signOut();
       }
     } catch (e) {
-      debugPrint('Logout API error: $e');
-      // Continue with local logout even if API call fails
+      debugPrint('Firebase signOut error: $e');
     } finally {
-      // Clear local data
       await _tokenManager.clearAll();
       await _googleSignIn.signOut();
-
       _currentUser = null;
       _authStateController.add(null);
     }
@@ -255,19 +264,20 @@ class BackendAuthService {
   Future<Map<String, String>?> getAuthHeaders() async {
     final token = await getValidAccessToken();
     if (token != null) {
-      return ApiConfig.getAuthHeaders(token);
+      return {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      };
     }
     return null;
   }
 
   /// Get valid access token (refresh if needed)
   Future<String?> getValidAccessToken() async {
-    final token = await _tokenManager.getAccessToken();
-    if (token != null) {
-      // TODO: Check token expiry and refresh if needed
-      return token;
-    }
-    return null;
+    if (_firebaseAuth == null) return null;
+    final user = _firebaseAuth!.currentUser;
+    if (user == null) return null;
+    return await user.getIdToken();
   }
 
   /// Check if user is anonymous (guest)
@@ -277,21 +287,23 @@ class BackendAuthService {
   bool get isAdmin => _currentUser?['isAdmin'] == true;
 
   /// Get user-friendly error message
-  String getErrorMessage(ApiException e) {
-    switch (e.code) {
-      case 'DUPLICATE_EMAIL':
-        return 'This email is already registered. Please use a different email or try logging in.';
-      case 'INVALID_CREDENTIALS':
-        return 'Invalid email or password. Please check your credentials and try again.';
-      case 'INVALID_TOKEN':
-        return 'Your session has expired. Please log in again.';
-      case 'NETWORK_ERROR':
-        return 'Network error. Please check your internet connection and try again.';
-      case 'GOOGLE_ERROR':
-        return 'Google sign-in failed. Please try again.';
-      default:
-        return e.message;
+  String getErrorMessage(Object e) {
+    if (e is FirebaseAuthException) {
+      switch (e.code) {
+        case 'email-already-in-use':
+          return 'This email is already registered. Try logging in.';
+        case 'invalid-credential':
+        case 'wrong-password':
+        case 'user-not-found':
+          return 'Invalid email or password.';
+        case 'user-disabled':
+          return 'This account has been disabled.';
+        case 'network-request-failed':
+          return 'Network error. Please check your connection.';
+      }
+      return e.message ?? 'Authentication error. Please try again.';
     }
+    return 'Unexpected error. Please try again.';
   }
 
   /// Dispose resources

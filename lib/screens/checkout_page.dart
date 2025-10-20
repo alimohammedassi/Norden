@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_flip_card/flutter_flip_card.dart';
 import '../services/cart_service.dart';
 import '../services/address_service.dart';
 import '../models/address.dart';
@@ -20,6 +21,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
   int _selectedPaymentMethod = 0; // 0: Card, 1: Cash on Delivery
   bool _isProcessing = false;
 
+  // Card details
+  final TextEditingController _cardNumberController = TextEditingController();
+  final TextEditingController _expiryController = TextEditingController();
+  final TextEditingController _cvvController = TextEditingController();
+  final TextEditingController _cardNameController = TextEditingController();
+  final FlipCardController _cardController = FlipCardController();
+
   @override
   void initState() {
     super.initState();
@@ -35,6 +43,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
   @override
   void dispose() {
     _addressService.removeListener(_onAddressesChanged);
+    _cardNumberController.dispose();
+    _expiryController.dispose();
+    _cvvController.dispose();
+    _cardNameController.dispose();
     super.dispose();
   }
 
@@ -346,6 +358,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
           title: 'Cash on Delivery',
           subtitle: 'Pay when you receive',
         ),
+        const SizedBox(height: 20),
+
+        // Card details section (only show when card is selected)
+        if (_selectedPaymentMethod == 0) _buildCardDetailsSection(),
       ],
     );
   }
@@ -632,6 +648,403 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCardDetailsSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A).withOpacity(0.6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'CARD DETAILS',
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFFD4AF37),
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Flip Card
+          Center(
+            child: FlipCard(
+              controller: _cardController,
+              frontWidget: _buildCardFront(),
+              backWidget: _buildCardBack(),
+              rotateSide: RotateSide.left,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Card input fields
+          _buildCardInputFields(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardFront() {
+    return Container(
+      width: 300,
+      height: 180,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1E3C72), Color(0xFF2A5298)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'VISA',
+                  style: GoogleFonts.playfairDisplay(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
+                Container(
+                  width: 40,
+                  height: 25,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'VISA',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            Text(
+              _cardNumberController.text.isEmpty
+                  ? '•••• •••• •••• ••••'
+                  : _cardNumberController.text,
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'CARD HOLDER',
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _cardNameController.text.isEmpty
+                          ? 'YOUR NAME'
+                          : _cardNameController.text.toUpperCase(),
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'EXPIRES',
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _expiryController.text.isEmpty
+                          ? 'MM/YY'
+                          : _expiryController.text,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardBack() {
+    return Container(
+      width: 300,
+      height: 180,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1E3C72), Color(0xFF2A5298)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
+            Container(width: double.infinity, height: 40, color: Colors.black),
+            const SizedBox(height: 20),
+            Container(
+              width: double.infinity,
+              height: 30,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    const Expanded(child: SizedBox()),
+                    Text(
+                      _cvvController.text.isEmpty ? '•••' : _cvvController.text,
+                      style: GoogleFonts.inter(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'This card is property of the cardholder. If found, please return to the nearest bank.',
+              style: GoogleFonts.inter(
+                color: Colors.white.withOpacity(0.7),
+                fontSize: 8,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardInputFields() {
+    return Column(
+      children: [
+        // Card Number
+        _buildInputField(
+          controller: _cardNumberController,
+          label: 'Card Number',
+          hint: '1234 5678 9012 3456',
+          keyboardType: TextInputType.number,
+          maxLength: 19,
+          onChanged: (value) {
+            setState(() {});
+            // Auto-format card number
+            if (value.length > 0 &&
+                value.length % 5 == 0 &&
+                value[value.length - 1] != ' ') {
+              _cardNumberController.text =
+                  value.substring(0, value.length - 1) +
+                  ' ' +
+                  value[value.length - 1];
+              _cardNumberController.selection = TextSelection.fromPosition(
+                TextPosition(offset: _cardNumberController.text.length),
+              );
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+
+        // Card Holder Name
+        _buildInputField(
+          controller: _cardNameController,
+          label: 'Card Holder Name',
+          hint: 'John Doe',
+          onChanged: (value) => setState(() {}),
+        ),
+        const SizedBox(height: 16),
+
+        Row(
+          children: [
+            // Expiry Date
+            Expanded(
+              child: _buildInputField(
+                controller: _expiryController,
+                label: 'Expiry Date',
+                hint: 'MM/YY',
+                keyboardType: TextInputType.number,
+                maxLength: 5,
+                onChanged: (value) {
+                  setState(() {});
+                  // Auto-format expiry date
+                  if (value.length == 2 && !value.contains('/')) {
+                    _expiryController.text = value + '/';
+                    _expiryController.selection = TextSelection.fromPosition(
+                      TextPosition(offset: _expiryController.text.length),
+                    );
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
+
+            // CVV
+            Expanded(
+              child: _buildInputField(
+                controller: _cvvController,
+                label: 'CVV',
+                hint: '123',
+                keyboardType: TextInputType.number,
+                maxLength: 3,
+                onChanged: (value) {
+                  setState(() {});
+                  // Flip card to back when CVV is focused
+                  if (value.isNotEmpty) {
+                    _cardController.flipcard();
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Flip card button
+        Center(
+          child: TextButton.icon(
+            onPressed: () => _cardController.flipcard(),
+            icon: const Icon(Icons.flip, color: Color(0xFFD4AF37)),
+            label: Text(
+              'Flip Card',
+              style: GoogleFonts.inter(
+                color: const Color(0xFFD4AF37),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    TextInputType? keyboardType,
+    int? maxLength,
+    Function(String)? onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            color: const Color(0xFFD4AF37),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLength: maxLength,
+          onChanged: onChanged,
+          style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.inter(
+              color: Colors.white.withOpacity(0.5),
+              fontSize: 14,
+            ),
+            filled: true,
+            fillColor: const Color(0xFF0A0A0A).withOpacity(0.8),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: const Color(0xFFD4AF37).withOpacity(0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: const Color(0xFFD4AF37).withOpacity(0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD4AF37), width: 2),
+            ),
+            counterText: '',
+          ),
+        ),
+      ],
     );
   }
 }
