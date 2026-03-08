@@ -1,4 +1,4 @@
-/// Product model for API
+/// Product model — NORDEN Maison de Luxe
 class Product {
   final String id;
   final String name;
@@ -11,6 +11,11 @@ class Product {
   final bool isNew;
   final bool isFeatured;
   final int stock;
+  final double rating;
+  final int reviewCount;
+
+  /// Season slug: "winter" | "summer" | "all"
+  final String season;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -26,6 +31,9 @@ class Product {
     this.isNew = false,
     this.isFeatured = false,
     this.stock = 0,
+    this.rating = 4.8,
+    this.reviewCount = 0,
+    this.season = 'all',
     required this.createdAt,
     required this.updatedAt,
   });
@@ -44,6 +52,9 @@ class Product {
       'isNew': isNew,
       'isFeatured': isFeatured,
       'stock': stock,
+      'rating': rating,
+      'reviewCount': reviewCount,
+      'season': season,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -63,6 +74,9 @@ class Product {
       isNew: json['isNew'] ?? false,
       isFeatured: json['isFeatured'] ?? false,
       stock: json['stock'] ?? 0,
+      rating: (json['rating'] ?? 4.8).toDouble(),
+      reviewCount: json['reviewCount'] ?? 0,
+      season: json['season'] ?? 'all',
       createdAt: DateTime.parse(
         json['createdAt'] ?? DateTime.now().toIso8601String(),
       ),
@@ -73,14 +87,11 @@ class Product {
   }
 
   /// Convert Product to Map (for backward compatibility)
-  Map<String, dynamic> toMap() {
-    return toJson();
-  }
+  Map<String, dynamic> toMap() => toJson();
 
   /// Create Product from Map (for backward compatibility)
-  factory Product.fromMap(Map<String, dynamic> map, String id) {
-    return Product.fromJson(map);
-  }
+  factory Product.fromMap(Map<String, dynamic> map, String id) =>
+      Product.fromJson(map);
 
   /// Create a copy with updated fields
   Product copyWith({
@@ -95,6 +106,9 @@ class Product {
     bool? isNew,
     bool? isFeatured,
     int? stock,
+    double? rating,
+    int? reviewCount,
+    String? season,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -110,12 +124,15 @@ class Product {
       isNew: isNew ?? this.isNew,
       isFeatured: isFeatured ?? this.isFeatured,
       stock: stock ?? this.stock,
+      rating: rating ?? this.rating,
+      reviewCount: reviewCount ?? this.reviewCount,
+      season: season ?? this.season,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
-  /// Sample products for testing
+  /// Sample products for offline fallback
   static List<Product> getSampleProducts() {
     final now = DateTime.now();
     return [
@@ -125,12 +142,15 @@ class Product {
         description:
             'Tailored double-breasted blazer with sharp lapels and premium finish.',
         price: 299.99,
-        category: 'Clothing',
+        category: 'Blazers',
+        season: 'winter',
+        rating: 4.9,
+        reviewCount: 128,
         images: [
           'assets/images/Double-breasted_blazer.jpg',
           'assets/images/Single-breasted_blazer (1).jpg',
-          'assets/images/Tie-belt_denim_jacket.jpg',
-          'assets/images/Tie-belt_denim_jacket (2).jpg',
+          'assets/images/Fitted_blazer.jpg',
+          'assets/images/Long_blazer.jpg',
         ],
         colors: ['Black', 'Navy', 'Grey'],
         sizes: ['S', 'M', 'L', 'XL'],
@@ -142,11 +162,14 @@ class Product {
       ),
       Product(
         id: '2',
-        name: 'Trench Coat',
+        name: 'Classic Trench Coat',
         description:
-            'Premium trench coat with a flattering silhouette and water‑repellent finish.',
+            'Premium trench coat with a flattering silhouette and water-repellent finish.',
         price: 449.99,
-        category: 'Clothing',
+        category: 'Coats',
+        season: 'winter',
+        rating: 4.8,
+        reviewCount: 94,
         images: [
           'assets/images/Trench_coat.jpg',
           'assets/images/Car_coat.jpg',
@@ -167,7 +190,10 @@ class Product {
         description:
             'Classic car coat with clean lines and minimalist details for everyday elegance.',
         price: 399.99,
-        category: 'Clothing',
+        category: 'Coats',
+        season: 'all',
+        rating: 4.7,
+        reviewCount: 61,
         images: [
           'assets/images/Car_coat.jpg',
           'assets/images/Double-breasted_blazer.jpg',
@@ -184,11 +210,14 @@ class Product {
       ),
       Product(
         id: '4',
-        name: 'Tie‑belt Denim Jacket',
+        name: 'Tie-belt Denim Jacket',
         description:
-            'Contemporary tie‑belt denim jacket with structured shoulders and refined wash.',
+            'Contemporary tie-belt denim jacket with structured shoulders and refined wash.',
         price: 199.99,
-        category: 'Clothing',
+        category: 'Suits',
+        season: 'summer',
+        rating: 4.6,
+        reviewCount: 43,
         images: [
           'assets/images/Tie-belt_denim_jacket.jpg',
           'assets/images/Tie-belt_denim_jacket (2).jpg',
@@ -205,11 +234,14 @@ class Product {
       ),
       Product(
         id: '5',
-        name: 'Single‑breasted Blazer',
+        name: 'Single-breasted Blazer',
         description:
-            'Lightweight single‑breasted blazer for effortless layering and polish.',
+            'Lightweight single-breasted blazer for effortless layering and polish.',
         price: 319.99,
-        category: 'Clothing',
+        category: 'Blazers',
+        season: 'summer',
+        rating: 4.9,
+        reviewCount: 207,
         images: [
           'assets/images/Single-breasted_blazer (1).jpg',
           'assets/images/Double-breasted_blazer.jpg',
@@ -226,11 +258,14 @@ class Product {
       ),
       Product(
         id: '6',
-        name: 'Slim Fit Wool‑blend Coat',
+        name: 'Slim Fit Wool-blend Coat',
         description:
-            'Warm wool‑blend coat with slim silhouette and refined details.',
+            'Warm wool-blend coat with slim silhouette and refined details.',
         price: 469.99,
-        category: 'Clothing',
+        category: 'Coats',
+        season: 'winter',
+        rating: 4.8,
+        reviewCount: 156,
         images: [
           'assets/images/Slim_Fit_Wool-blend_coat_Image_2_of_6.jpg',
           'assets/images/young-man-dressed-coat-isolated-white-wall.jpg',
@@ -243,6 +278,54 @@ class Product {
         isFeatured: true,
         stock: 6,
         createdAt: now.subtract(const Duration(days: 10)),
+        updatedAt: now,
+      ),
+      Product(
+        id: '7',
+        name: 'Collarless Blazer',
+        description:
+            'Modern collarless blazer with a minimalist edge and fine tailoring.',
+        price: 279.99,
+        category: 'Blazers',
+        season: 'all',
+        rating: 4.7,
+        reviewCount: 82,
+        images: [
+          'assets/images/Collarless_blazer.jpg',
+          'assets/images/Collarless_blazer (1).jpg',
+          'assets/images/Collarless_blazer (2).jpg',
+          'assets/images/Collarless_blazer (3).jpg',
+        ],
+        colors: ['Ivory', 'Black', 'Beige'],
+        sizes: ['XS', 'S', 'M', 'L'],
+        isNew: true,
+        isFeatured: false,
+        stock: 18,
+        createdAt: now.subtract(const Duration(days: 4)),
+        updatedAt: now,
+      ),
+      Product(
+        id: '8',
+        name: 'Padded Jacket',
+        description:
+            'Insulated padded jacket with a sleek silhouette and premium down filling.',
+        price: 349.99,
+        category: 'Coats',
+        season: 'winter',
+        rating: 4.9,
+        reviewCount: 315,
+        images: [
+          'assets/images/Padded_jacket.jpg',
+          'assets/images/Padded_jacket (1).jpg',
+          'assets/images/Padded_jacket (2).jpg',
+          'assets/images/Padded_jacket (3).jpg',
+        ],
+        colors: ['Black', 'Navy', 'Olive'],
+        sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+        isNew: false,
+        isFeatured: true,
+        stock: 30,
+        createdAt: now.subtract(const Duration(days: 14)),
         updatedAt: now,
       ),
     ];

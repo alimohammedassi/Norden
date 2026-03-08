@@ -56,7 +56,7 @@ class _SimpleMapPickerState extends State<SimpleMapPicker> {
     });
 
     try {
-      print('Getting current location on init...');
+      debugPrint('Getting current location on init...');
 
       // Use LocationService for better error handling
       final position = await _locationService.getCurrentPosition(
@@ -64,7 +64,7 @@ class _SimpleMapPickerState extends State<SimpleMapPicker> {
       );
 
       if (position != null) {
-        print(
+        debugPrint(
           'Current position on init: ${position.latitude}, ${position.longitude}',
         );
 
@@ -107,7 +107,7 @@ class _SimpleMapPickerState extends State<SimpleMapPicker> {
             });
           }
         } catch (e) {
-          print('Error getting address on init: $e');
+          debugPrint('Error getting address on init: $e');
           setState(() {
             _selectedLocation = currentLocation;
             _selectedAddress = 'Current Location';
@@ -116,7 +116,7 @@ class _SimpleMapPickerState extends State<SimpleMapPicker> {
         }
       } else {
         // Location service failed
-        print('Failed to get current location on init');
+        debugPrint('Failed to get current location on init');
         setState(() {
           _selectedLocation = const LatLng(30.0444, 31.2357);
           _selectedAddress = 'Cairo, Egypt (Default - Location unavailable)';
@@ -137,7 +137,7 @@ class _SimpleMapPickerState extends State<SimpleMapPicker> {
         }
       }
     } catch (e) {
-      print('Error in _getCurrentLocationOnInit: $e');
+      debugPrint('Error in _getCurrentLocationOnInit: $e');
       setState(() {
         _selectedLocation = const LatLng(30.0444, 31.2357);
         _selectedAddress = 'Cairo, Egypt (Default Location)';
@@ -152,7 +152,7 @@ class _SimpleMapPickerState extends State<SimpleMapPicker> {
       _selectedAddress =
           'Lat: ${location.latitude.toStringAsFixed(4)}, Lng: ${location.longitude.toStringAsFixed(4)}';
     });
-    print('Map tapped at: ${location.latitude}, ${location.longitude}');
+    debugPrint('Map tapped at: ${location.latitude}, ${location.longitude}');
   }
 
   void _onCurrentLocationPressed() async {
@@ -161,7 +161,7 @@ class _SimpleMapPickerState extends State<SimpleMapPicker> {
     });
 
     try {
-      print('Getting current location...');
+      debugPrint('Getting current location...');
 
       // Use LocationService for better error handling
       final position = await _locationService.getCurrentPosition(
@@ -169,7 +169,9 @@ class _SimpleMapPickerState extends State<SimpleMapPicker> {
       );
 
       if (position != null) {
-        print('Current position: ${position.latitude}, ${position.longitude}');
+        debugPrint(
+          'Current position: ${position.latitude}, ${position.longitude}',
+        );
 
         final currentLocation = LatLng(position.latitude, position.longitude);
 
@@ -210,7 +212,7 @@ class _SimpleMapPickerState extends State<SimpleMapPicker> {
             });
           }
         } catch (e) {
-          print('Error getting address: $e');
+          debugPrint('Error getting address: $e');
           setState(() {
             _selectedLocation = currentLocation;
             _selectedAddress = 'Current Location';
@@ -219,7 +221,7 @@ class _SimpleMapPickerState extends State<SimpleMapPicker> {
         }
       } else {
         // Location service failed
-        print('Failed to get current location');
+        debugPrint('Failed to get current location');
         setState(() {
           _selectedLocation = const LatLng(30.0444, 31.2357);
           _selectedAddress = 'Cairo, Egypt (Default - Location unavailable)';
@@ -245,7 +247,7 @@ class _SimpleMapPickerState extends State<SimpleMapPicker> {
         }
       }
     } catch (e) {
-      print('Error in _onCurrentLocationPressed: $e');
+      debugPrint('Error in _onCurrentLocationPressed: $e');
       setState(() {
         _selectedLocation = const LatLng(30.0444, 31.2357);
         _selectedAddress = 'Cairo, Egypt (Default Location)';
@@ -268,22 +270,22 @@ class _SimpleMapPickerState extends State<SimpleMapPicker> {
   }
 
   void _onConfirmPressed() {
-    print('=== CONFIRM LOCATION PRESSED ===');
-    print('Selected location: $_selectedLocation');
-    print('Selected address: $_selectedAddress');
+    debugPrint('=== CONFIRM LOCATION PRESSED ===');
+    debugPrint('Selected location: $_selectedLocation');
+    debugPrint('Selected address: $_selectedAddress');
 
     if (_selectedLocation != null) {
-      print('Calling onLocationSelected callback...');
-      print('Latitude: ${_selectedLocation!.latitude}');
-      print('Longitude: ${_selectedLocation!.longitude}');
-      print('Address: $_selectedAddress');
+      debugPrint('Calling onLocationSelected callback...');
+      debugPrint('Latitude: ${_selectedLocation!.latitude}');
+      debugPrint('Longitude: ${_selectedLocation!.longitude}');
+      debugPrint('Address: $_selectedAddress');
 
       widget.onLocationSelected(
         _selectedLocation!.latitude,
         _selectedLocation!.longitude,
         _selectedAddress,
       );
-      print('Callback completed, navigating back...');
+      debugPrint('Callback completed, navigating back...');
       Navigator.of(context).pop();
 
       // Show success message
@@ -297,7 +299,7 @@ class _SimpleMapPickerState extends State<SimpleMapPicker> {
         );
       }
     } else {
-      print('No location selected!');
+      debugPrint('No location selected!');
       // Show error message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

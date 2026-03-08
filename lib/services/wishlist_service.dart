@@ -82,6 +82,9 @@ class WishlistService with ChangeNotifier {
 
   int getWishlistCountSync() => _wishlistItems.length;
 
+  /// Public access to the current wishlist items list
+  List<WishlistItem> get wishlistItems => List.unmodifiable(_wishlistItems);
+
   Future<int> getWishlistCount() async {
     await loadWishlist();
     return _wishlistItems.length;

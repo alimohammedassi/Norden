@@ -58,10 +58,13 @@ class BackendAddressService {
   Future<Address?> getDefaultAddress() async {
     try {
       final addresses = await getAddresses();
-      return addresses.firstWhere(
-        (address) => address.isDefault,
-        orElse: () => addresses.isNotEmpty ? addresses.first : null!,
-      );
+      if (addresses.isEmpty) return null;
+
+      try {
+        return addresses.firstWhere((address) => address.isDefault);
+      } catch (_) {
+        return addresses.first;
+      }
     } catch (e) {
       debugPrint('Error getting default address: $e');
       return null;

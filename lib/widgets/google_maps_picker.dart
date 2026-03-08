@@ -318,13 +318,13 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
         ),
         border: Border(
           bottom: BorderSide(
-            color: const Color(0xFFD4AF37).withOpacity(0.3),
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
             width: 1,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -339,7 +339,7 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
               shape: BoxShape.circle,
               color: const Color(0xFF2A2A2A),
               border: Border.all(
-                color: const Color(0xFFD4AF37).withOpacity(0.3),
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
@@ -369,7 +369,7 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
                   'Tap on map to choose',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withValues(alpha: 0.5),
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -388,12 +388,12 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
                     ),
               color: _isLoading ? const Color(0xFF2A2A2A) : null,
               border: Border.all(
-                color: const Color(0xFFD4AF37).withOpacity(0.3),
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
                 width: 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFD4AF37).withOpacity(0.3),
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
                   blurRadius: 12,
                   spreadRadius: 0,
                 ),
@@ -434,17 +434,17 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: const Color(0xFFD4AF37).withOpacity(0.3),
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
                 width: 2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFD4AF37).withOpacity(0.2),
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.4),
+                  color: Colors.black.withValues(alpha: 0.4),
                   blurRadius: 15,
                   offset: const Offset(0, 4),
                 ),
@@ -513,12 +513,12 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
         shape: BoxShape.circle,
         color: const Color(0xFF1A1A1A),
         border: Border.all(
-          color: const Color(0xFFD4AF37).withOpacity(0.4),
+          color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -547,17 +547,17 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: const Color(0xFFD4AF37).withOpacity(0.3),
+          color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFD4AF37).withOpacity(0.1),
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
+            color: Colors.black.withValues(alpha: 0.4),
             blurRadius: 15,
             offset: const Offset(0, 4),
           ),
@@ -601,13 +601,13 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.green.withOpacity(0.2),
-                        Colors.green.withOpacity(0.1),
+                        Colors.green.withValues(alpha: 0.2),
+                        Colors.green.withValues(alpha: 0.1),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: Colors.green.withOpacity(0.6),
+                      color: Colors.green.withValues(alpha: 0.6),
                       width: 1.5,
                     ),
                   ),
@@ -633,6 +633,61 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
                   ),
                 ),
             ],
+          ),
+          const SizedBox(height: 20),
+          // New "Use Current Location" prominent button
+          Container(
+            width: double.infinity,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFF2A2A2A),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                width: 1,
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _isLoading ? null : _getCurrentLocation,
+                borderRadius: BorderRadius.circular(14),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isLoading)
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFFD4AF37),
+                          ),
+                        ),
+                      )
+                    else
+                      const Icon(
+                        Icons.my_location_rounded,
+                        color: Color(0xFFD4AF37),
+                        size: 20,
+                      ),
+                    const SizedBox(width: 10),
+                    Text(
+                      _isLoading
+                          ? 'GETTING LOCATION...'
+                          : 'USE CURRENT LOCATION',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFFD4AF37),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 20),
           SingleChildScrollView(
@@ -667,7 +722,7 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
                       color: const Color(0xFF2A2A2A),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: const Color(0xFFD4AF37).withOpacity(0.3),
+                        color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
                         width: 1,
                       ),
                     ),
@@ -677,7 +732,9 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xFFD4AF37).withOpacity(0.2),
+                            color: const Color(
+                              0xFFD4AF37,
+                            ).withValues(alpha: 0.2),
                           ),
                           child: const Icon(
                             Icons.location_on,
@@ -702,7 +759,7 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
                               Text(
                                 _formattedAddress!,
                                 style: GoogleFonts.inter(
-                                  color: Colors.white.withOpacity(0.9),
+                                  color: Colors.white.withValues(alpha: 0.9),
                                   fontSize: 13,
                                   height: 1.4,
                                 ),
@@ -727,7 +784,7 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFD4AF37).withOpacity(0.4),
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -794,7 +851,7 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -811,12 +868,12 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.inter(
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
                 fontSize: 14,
               ),
               prefixIcon: Icon(
                 icon,
-                color: const Color(0xFFD4AF37).withOpacity(0.6),
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.6),
                 size: 20,
               ),
               filled: true,
@@ -824,14 +881,14 @@ class _GoogleMapsPickerState extends State<GoogleMapsPicker> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
-                  color: const Color(0xFFD4AF37).withOpacity(0.3),
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
-                  color: const Color(0xFFD4AF37).withOpacity(0.3),
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),

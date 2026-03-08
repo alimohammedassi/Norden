@@ -3,6 +3,7 @@ import '../models/product.dart';
 import '../config/api_config.dart';
 import 'api_service.dart';
 import 'backend_auth_service.dart';
+import 'backend_category_service.dart';
 
 /// Product service using the custom backend API
 class BackendProductService {
@@ -144,9 +145,9 @@ class BackendProductService {
     return getProducts(category: category, limit: limit, offset: offset);
   }
 
-  /// Get available categories
-  List<String> getCategories() {
-    return ['Coats', 'Blazers', 'DressShirts', 'Trousers', 'Accessories'];
+  /// Get available categories — delegates to BackendCategoryService (with fallback)
+  Future<List<String>> getCategoryNames({String? season}) async {
+    return BackendCategoryService().getCategoryNames(season: season);
   }
 
   /// Get available colors
