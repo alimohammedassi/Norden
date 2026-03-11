@@ -4,11 +4,8 @@
 /// All other endpoints are derived from it automatically.
 class ApiConfig {
   // ── Base URL ──────────────────────────────────────────────────────────────
-  // Change this single value to point to your backend environment.
-  // Example dev:        'http://192.168.1.4:5129/api'
-  // Example staging:    'https://api-staging.norden-luxe.com/api'
-  // Example production: 'https://api.norden-luxe.com/api'
-  static const String baseUrl = 'http://192.168.1.4:5129/api';
+  // Production backend server
+  static const String baseUrl = 'http://www.nordenstore.somee.com/api';
 
   // ── Endpoints ─────────────────────────────────────────────────────────────
   static const String authEndpoint = '$baseUrl/auth';
@@ -21,6 +18,9 @@ class ApiConfig {
   static const String addressesEndpoint = '$baseUrl/addresses';
   static const String reviewsEndpoint = '$baseUrl/reviews';
   static const String profileEndpoint = '$baseUrl/profile';
+  static const String onboardingEndpoint = '$baseUrl/onboarding';
+  static const String bannersEndpoint = '$baseUrl/banners';
+  static const String locationEndpoint = '$baseUrl/location';
 
   // ── Headers ───────────────────────────────────────────────────────────────
   static Map<String, String> getAuthHeaders(String token) => {

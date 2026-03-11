@@ -8,6 +8,8 @@ import '../services/wishlist_service.dart';
 import '../services/review_service.dart';
 import '../models/review.dart';
 import 'reviews_page.dart';
+import '../providers/season_provider.dart';
+import '../config/app_theme.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -20,6 +22,7 @@ class ProductDetailsPage extends StatefulWidget {
 
 class _ProductDetailsPageState extends State<ProductDetailsPage>
     with TickerProviderStateMixin {
+  SeasonTokens get t => SeasonScope.of(context).tokens;
   late AnimationController _controller;
   late AnimationController _scaleController;
   late Animation<double> _fadeAnimation;
@@ -138,7 +141,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               'Removed from wishlist',
               style: GoogleFonts.inter(color: Colors.black),
             ),
-            backgroundColor: const Color(0xFFD4AF37),
+            backgroundColor: t.gold,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -162,7 +165,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                 ),
               ],
             ),
-            backgroundColor: const Color(0xFFD4AF37),
+            backgroundColor: t.gold,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -229,7 +232,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               ),
             ],
           ),
-          backgroundColor: const Color(0xFFD4AF37),
+          backgroundColor: t.gold,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -258,7 +261,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [const Color(0xFF0A0A0A), const Color(0xFF1A1A1A)],
+                colors: [t.bg, t.surface],
               ),
             ),
             child: Center(
@@ -266,7 +269,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CircularProgressIndicator(
-                    color: const Color(0xFFD4AF37),
+                    color: t.gold,
                     strokeWidth: 3,
                     value: loadingProgress.expectedTotalBytes != null
                         ? loadingProgress.cumulativeBytesLoaded /
@@ -277,7 +280,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   Text(
                     'Loading...',
                     style: GoogleFonts.inter(
-                      color: const Color(0xFFD4AF37),
+                      color: t.gold,
                       fontSize: 16,
                     ),
                   ),
@@ -292,7 +295,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [const Color(0xFF0A0A0A), const Color(0xFF1A1A1A)],
+                colors: [t.bg, t.surface],
               ),
             ),
             child: Center(
@@ -301,14 +304,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                 children: [
                   Icon(
                     Icons.image_not_supported,
-                    color: const Color(0xFFD4AF37).withOpacity(0.5),
+                    color: t.gold.withOpacity(0.5),
                     size: 60,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Image not available',
                     style: GoogleFonts.inter(
-                      color: const Color(0xFFD4AF37).withOpacity(0.7),
+                      color: t.gold.withOpacity(0.7),
                       fontSize: 16,
                     ),
                   ),
@@ -332,7 +335,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [const Color(0xFF0A0A0A), const Color(0xFF1A1A1A)],
+                colors: [t.bg, t.surface],
               ),
             ),
             child: Center(
@@ -341,14 +344,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                 children: [
                   Icon(
                     Icons.image_not_supported,
-                    color: const Color(0xFFD4AF37).withOpacity(0.5),
+                    color: t.gold.withOpacity(0.5),
                     size: 60,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Image not available',
                     style: GoogleFonts.inter(
-                      color: const Color(0xFFD4AF37).withOpacity(0.7),
+                      color: t.gold.withOpacity(0.7),
                       fontSize: 16,
                     ),
                   ),
@@ -364,16 +367,16 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: t.bg,
       body: Container(
-        color: const Color(0xFF0A0A0A),
+        color: t.bg,
         child: Container(
           decoration: BoxDecoration(
             gradient: RadialGradient(
               center: Alignment.topCenter,
               radius: 1.2,
               colors: [
-                const Color(0xFFD4AF37).withOpacity(0.05),
+                t.gold.withOpacity(0.05),
                 Colors.transparent,
               ],
             ),
@@ -399,7 +402,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                       shape: BoxShape.circle,
                       color: Colors.black.withOpacity(0.7),
                       border: Border.all(
-                        color: const Color(0xFFD4AF37).withOpacity(0.6),
+                        color: t.gold.withOpacity(0.6),
                         width: 2,
                       ),
                       boxShadow: [
@@ -409,7 +412,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                           spreadRadius: 1,
                         ),
                         BoxShadow(
-                          color: const Color(0xFFD4AF37).withOpacity(0.3),
+                          color: t.gold.withOpacity(0.3),
                           blurRadius: 8,
                           spreadRadius: 0,
                         ),
@@ -419,7 +422,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                       _isFavorite ? Icons.favorite : Icons.favorite_border,
                       color: _isFavorite
                           ? const Color(0xFFFF3B30)
-                          : const Color(0xFFD4AF37),
+                          : t.gold,
                       size: 26,
                     ),
                   ),
@@ -450,7 +453,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                 Positioned.fill(
                   child: IgnorePointer(
                     child: CustomPaint(
-                      painter: HeartBurstPainter(animation: _controller),
+                      painter: HeartBurstPainter(animation: _controller, t: t),
                     ),
                   ),
                 ),
@@ -572,8 +575,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFD4AF37), Color(0xFFB8860B)],
+                        gradient: LinearGradient(
+                          colors: [t.gold, Color(0xFFB8860B)],
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -622,7 +625,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         height: 10,
         decoration: BoxDecoration(
           color: _selectedImageIndex == index
-              ? const Color(0xFFD4AF37)
+              ? t.gold
               : Colors.white.withOpacity(0.4),
           borderRadius: BorderRadius.circular(5),
           border: _selectedImageIndex == index
@@ -649,13 +652,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
           height: MediaQuery.of(context).size.height * 0.45,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A),
+            color: t.surface,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(28),
               topRight: Radius.circular(28),
             ),
             border: Border.all(
-              color: const Color(0xFFD4AF37).withOpacity(0.2),
+              color: t.gold.withOpacity(0.2),
               width: 1,
             ),
             boxShadow: [
@@ -665,7 +668,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                 offset: const Offset(0, -8),
               ),
               BoxShadow(
-                color: const Color(0xFFD4AF37).withOpacity(0.1),
+                color: t.gold.withOpacity(0.1),
                 blurRadius: 10,
                 offset: const Offset(0, -4),
               ),
@@ -682,7 +685,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     width: 50,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD4AF37).withOpacity(0.3),
+                      color: t.gold.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -702,10 +705,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0A0A0A),
+                      color: t.bg,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: const Color(0xFFD4AF37).withOpacity(0.3),
+                        color: t.gold.withOpacity(0.3),
                         width: 1,
                       ),
                       boxShadow: [
@@ -719,7 +722,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     child: Text(
                       '\$${_formatPrice(widget.product['price'])}',
                       style: GoogleFonts.inter(
-                        color: const Color(0xFFD4AF37),
+                        color: t.gold,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                       ),
@@ -803,10 +806,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
+                    color: t.surface,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: const Color(0xFFD4AF37).withOpacity(0.3),
+                      color: t.gold.withOpacity(0.3),
                       width: 1,
                     ),
                   ),
@@ -815,7 +818,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     children: [
                       Icon(
                         Icons.star_rounded,
-                        color: const Color(0xFFD4AF37),
+                        color: t.gold,
                         size: 18,
                       ),
                       const SizedBox(width: 4),
@@ -832,14 +835,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                       Text(
                         '(${_productRating?.totalReviews ?? (widget.product['reviews'] ?? 0)} reviews)',
                         style: GoogleFonts.inter(
-                          color: const Color(0xFFD4AF37).withOpacity(0.6),
+                          color: t.gold.withOpacity(0.6),
                           fontSize: 14,
                         ),
                       ),
                       const SizedBox(width: 4),
                       Icon(
                         Icons.arrow_forward_ios,
-                        color: const Color(0xFFD4AF37).withOpacity(0.6),
+                        color: t.gold.withOpacity(0.6),
                         size: 12,
                       ),
                     ],
@@ -860,7 +863,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         Text(
           title,
           style: GoogleFonts.inter(
-            color: const Color(0xFFD4AF37),
+            color: t.gold,
             fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
@@ -887,24 +890,24 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               gradient: _selectedColorIndex == index
-                  ? const LinearGradient(
-                      colors: [Color(0xFFD4AF37), Color(0xFFB8860B)],
+                  ? LinearGradient(
+                      colors: [t.gold, Color(0xFFB8860B)],
                     )
                   : null,
               color: _selectedColorIndex != index
-                  ? const Color(0xFF1A1A1A)
+                  ? t.surface
                   : null,
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
                 color: _selectedColorIndex == index
-                    ? const Color(0xFFD4AF37)
-                    : const Color(0xFFD4AF37).withOpacity(0.2),
+                    ? t.gold
+                    : t.gold.withOpacity(0.2),
                 width: 1,
               ),
               boxShadow: _selectedColorIndex == index
                   ? [
                       BoxShadow(
-                        color: const Color(0xFFD4AF37).withOpacity(0.3),
+                        color: t.gold.withOpacity(0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -917,7 +920,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               style: GoogleFonts.inter(
                 color: _selectedColorIndex == index
                     ? Colors.black
-                    : const Color(0xFFD4AF37).withOpacity(0.7),
+                    : t.gold.withOpacity(0.7),
                 fontSize: 13,
                 fontWeight: _selectedColorIndex == index
                     ? FontWeight.w700
@@ -963,24 +966,24 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             height: 45,
             decoration: BoxDecoration(
               gradient: _selectedSizeIndex == index
-                  ? const LinearGradient(
-                      colors: [Color(0xFFD4AF37), Color(0xFFB8860B)],
+                  ? LinearGradient(
+                      colors: [t.gold, Color(0xFFB8860B)],
                     )
                   : null,
               color: _selectedSizeIndex != index
-                  ? const Color(0xFF1A1A1A)
+                  ? t.surface
                   : null,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: _selectedSizeIndex == index
-                    ? const Color(0xFFD4AF37)
-                    : const Color(0xFFD4AF37).withOpacity(0.2),
+                    ? t.gold
+                    : t.gold.withOpacity(0.2),
                 width: 1,
               ),
               boxShadow: _selectedSizeIndex == index
                   ? [
                       BoxShadow(
-                        color: const Color(0xFFD4AF37).withOpacity(0.3),
+                        color: t.gold.withOpacity(0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -994,7 +997,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                 style: GoogleFonts.inter(
                   color: _selectedSizeIndex == index
                       ? Colors.black
-                      : const Color(0xFFD4AF37).withOpacity(0.7),
+                      : t.gold.withOpacity(0.7),
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1013,7 +1016,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         color: const Color(0xFF0F0F0F),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFD4AF37).withOpacity(0.2),
+          color: t.gold.withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -1023,7 +1026,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
           Text(
             'Quantity',
             style: GoogleFonts.inter(
-              color: const Color(0xFFD4AF37),
+              color: t.gold,
               fontSize: 15,
               fontWeight: FontWeight.w600,
             ),
@@ -1077,7 +1080,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFD4AF37).withOpacity(0.3),
+                      color: t.gold.withOpacity(0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                       spreadRadius: 0,
@@ -1093,15 +1096,15 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   height: 60,
                   borderRadius: 30,
                   elevation: 0,
-                  innerColor: const Color(0xFF1A1A1A),
-                  outerColor: const Color(0xFF0A0A0A),
+                  innerColor: t.surface,
+                  outerColor: t.bg,
                   sliderButtonIconPadding: 0,
                   sliderButtonIcon: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: _isAddingToCart
-                          ? const Color(0xFFD4AF37).withOpacity(0.3)
+                          ? t.gold.withOpacity(0.3)
                           : Colors.transparent,
                     ),
                     child: _isAddingToCart
@@ -1111,13 +1114,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                const Color(0xFFD4AF37),
+                                t.gold,
                               ),
                             ),
                           )
-                        : const Icon(
+                        : Icon(
                             Icons.shopping_cart_outlined,
-                            color: Color(0xFFD4AF37),
+                            color: t.gold,
                             size: 30,
                           ),
                   ),
@@ -1125,7 +1128,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                       ? 'Adding to Cart...'
                       : 'Swipe to Add to Cart',
                   textStyle: GoogleFonts.playfairDisplay(
-                    color: const Color(0xFFD4AF37),
+                    color: t.gold,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.5,
@@ -1172,15 +1175,15 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: isActive
-            ? const LinearGradient(
-                colors: [Color(0xFFD4AF37), Color(0xFFB8860B)],
+            ? LinearGradient(
+                colors: [t.gold, Color(0xFFB8860B)],
               )
             : null,
         color: !isActive ? Colors.black.withOpacity(0.8) : null,
         border: Border.all(
           color: isActive
-              ? const Color(0xFFD4AF37)
-              : const Color(0xFFD4AF37).withOpacity(0.6),
+              ? t.gold
+              : t.gold.withOpacity(0.6),
           width: 2,
         ),
         boxShadow: [
@@ -1190,7 +1193,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             offset: const Offset(0, 4),
           ),
           BoxShadow(
-            color: const Color(0xFFD4AF37).withOpacity(0.2),
+            color: t.gold.withOpacity(0.2),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -1217,9 +1220,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
       height: 36,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFF1A1A1A),
+        color: t.surface,
         border: Border.all(
-          color: const Color(0xFFD4AF37).withOpacity(0.3),
+          color: t.gold.withOpacity(0.3),
           width: 1,
         ),
       ),
@@ -1230,7 +1233,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
           borderRadius: BorderRadius.circular(18),
           child: Icon(
             icon,
-            color: const Color(0xFFD4AF37).withOpacity(0.8),
+            color: t.gold.withOpacity(0.8),
             size: 18,
           ),
         ),
@@ -1241,15 +1244,16 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
 class HeartBurstPainter extends CustomPainter {
   final Animation<double> animation;
+  final SeasonTokens t;
 
-  HeartBurstPainter({required this.animation}) : super(repaint: animation);
+  HeartBurstPainter({required this.animation, required this.t}) : super(repaint: animation);
 
   @override
   void paint(Canvas canvas, Size size) {
     if (animation.value < 0.1 || animation.value > 0.5) return;
 
     final paint = Paint()
-      ..color = const Color(0xFFD4AF37).withOpacity(0.6 - animation.value)
+      ..color = t.gold.withOpacity(0.6 - animation.value)
       ..style = PaintingStyle.fill;
 
     final center = Offset(size.width * 0.85, size.height * 0.15);

@@ -5,6 +5,8 @@ import '../services/cart_service.dart';
 import '../services/address_service.dart';
 import '../models/address.dart';
 import 'profile/addresses_page.dart';
+import 'order_tracking_page.dart';
+import 'dart:math';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({Key? key}) : super(key: key);
@@ -81,10 +83,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
       setState(() => _isProcessing = false);
       _cartService.clear();
 
+      // Generate a random order ID
+      final orderId = 'NRD-${(10000 + Random().nextInt(90000))}';
+
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => _buildSuccessDialog(),
+        builder: (context) => _buildSuccessDialog(orderId),
       );
     }
   }
@@ -572,7 +577,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  Widget _buildSuccessDialog() {
+  Widget _buildSuccessDialog(String orderId) {
     return AlertDialog(
       backgroundColor: const Color(0xFF1A1A1A),
       shape: RoundedRectangleBorder(
@@ -599,6 +604,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
               color: const Color(0xFFD4AF37),
             ),
           ),
+          const SizedBox(height: 8),
+          Text(
+            orderId,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: const Color(0xFFD4AF37).withOpacity(0.5),
+              letterSpacing: 1,
+            ),
+          ),
           const SizedBox(height: 12),
           Text(
             'Your order has been placed successfully',
@@ -609,11 +623,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
           ),
           const SizedBox(height: 24),
+          // Track Order button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                Navigator.of(context).popUntil((route) => route.isFirst);
+                Navigator.of(context).pop(); // close dialog
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => OrderTrackingPage(orderId: orderId),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
@@ -634,7 +654,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   alignment: Alignment.center,
                   child: Text(
-                    'CONTINUE SHOPPING',
+                    'TRACK ORDER',
                     style: GoogleFonts.playfairDisplay(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -642,6 +662,24 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       color: Colors.black,
                     ),
                   ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+              child: Text(
+                'CONTINUE SHOPPING',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.5,
+                  color: const Color(0xFFD4AF37).withOpacity(0.6),
                 ),
               ),
             ),

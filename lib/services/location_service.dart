@@ -1,5 +1,7 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import '../config/api_config.dart';
+import 'api_service.dart';
 
 class LocationService {
   static final LocationService _instance = LocationService._internal();
@@ -143,6 +145,29 @@ class LocationService {
     } catch (e) {
       print('Error getting coordinates: $e');
       return null;
+    }
+  }
+
+  /// Sync location data to backend
+  Future<void> syncLocationToBackend({
+    required double latitude,
+    required double longitude,
+    required String city,
+    required String country,
+  }) async {
+    try {
+      final response = await ApiService.post(
+        ApiConfig.locationEndpoint,
+        body: {
+          'latitude': latitude,
+          'longitude': longitude,
+          'city': city,
+          'country': country,
+        },
+      );
+      print('Location successfully synced to backend: $response');
+    } catch (e) {
+      print('Failed to sync location to backend: $e');
     }
   }
 }

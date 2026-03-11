@@ -12,6 +12,7 @@ import '../config/app_theme.dart';
 import 'cart_page.dart';
 import 'profile_page.dart';
 import 'wishlist_page.dart';
+import '../providers/season_provider.dart';
 
 // ─────────────────────────────────────────────────────────
 //  MAIN PAGE
@@ -25,8 +26,8 @@ class NordenHomePage extends StatefulWidget {
 class _NordenHomePageState extends State<NordenHomePage>
     with TickerProviderStateMixin {
   // ── Theme / Season ─────────────────────────────────────
-  SeasonMode _season = SeasonMode.winter;
-  SeasonTokens get _t => AppTheme.of(_season);
+  SeasonTokens get t => SeasonScope.of(context).tokens;
+  SeasonMode get _season => SeasonScope.of(context).mode;
 
   // ── Animations ────────────────────────────────────────
   late AnimationController _entranceCtrl;
@@ -231,7 +232,7 @@ class _NordenHomePageState extends State<NordenHomePage>
   }
 
   // ── Helpers ───────────────────────────────────────────
-  Map<String, dynamic> _toMap(Product p) => {
+  Map<String, dynamic> toMap(Product p) => {
     'id': p.id,
     'name': p.name,
     'price': p.price,
@@ -255,7 +256,7 @@ class _NordenHomePageState extends State<NordenHomePage>
     final sp = Product.getSampleProducts();
     _products
       ..clear()
-      ..addAll(sp.map(_toMap));
+      ..addAll(sp.map(toMap));
     if (mounted) setState(() {});
   }
 
@@ -267,8 +268,8 @@ class _NordenHomePageState extends State<NordenHomePage>
         _products.clear();
         _products.addAll(
           ps.isNotEmpty
-              ? ps.map(_toMap)
-              : Product.getSampleProducts().map(_toMap),
+              ? ps.map(toMap)
+              : Product.getSampleProducts().map(toMap),
         );
       });
     } catch (_) {
@@ -302,8 +303,8 @@ class _NordenHomePageState extends State<NordenHomePage>
   void _switchSeason(SeasonMode mode) {
     if (mode == _season) return;
     HapticFeedback.mediumImpact();
+    SeasonScope.read(context).switchTo(mode);
     setState(() {
-      _season = mode;
       _catIndex = 0;
       _currentSlide = 0;
     });
@@ -340,7 +341,6 @@ class _NordenHomePageState extends State<NordenHomePage>
   // ─────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final t = _t;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 600),
       curve: Curves.easeInOut,
@@ -754,7 +754,7 @@ class _NordenHomePageState extends State<NordenHomePage>
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) =>
-          _SortSheet(onSort: (s) => Navigator.pop(context), tokens: _t),
+          _SortSheet(onSort: (s) => Navigator.pop(context), tokens: t),
     );
   }
 
@@ -764,7 +764,7 @@ class _NordenHomePageState extends State<NordenHomePage>
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => _SearchSheet(
-        tokens: _t,
+        tokens: t,
         onSearch: (q) {
           // TODO: wire to BackendProductService.searchProducts(query: q)
         },
@@ -866,7 +866,7 @@ class _AnimatedLogo extends StatelessWidget {
                 Text(
                   'MAISON DE LUXE',
                   style: GoogleFonts.cormorantGaramond(
-                    fontSize: 9,
+                    fontSize: 5,
                     color: t.gold.withOpacity(0.6),
                     letterSpacing: 3,
                   ),
@@ -1387,7 +1387,7 @@ class _ProductCardState extends State<_ProductCard>
       setState(() => _inWish = widget.wishlistService.isInWishlistSync(id));
   }
 
-  Future<void> _toggleWish() async {
+  Future<void> toggleWish() async {
     final id = widget.product['id']?.toString();
     if (id == null) return;
     HapticFeedback.lightImpact();
@@ -1549,7 +1549,7 @@ class _ProductCardState extends State<_ProductCard>
                       builder: (_, __) => Transform.scale(
                         scale: _heartScale.value,
                         child: GestureDetector(
-                          onTap: _toggleWish,
+                          onTap: toggleWish,
                           child: Container(
                             width: 34,
                             height: 34,
