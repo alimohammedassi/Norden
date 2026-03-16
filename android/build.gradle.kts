@@ -1,6 +1,4 @@
 plugins {
-    // Google Services plugin required for Firebase (root, apply false)
-    id("com.google.gms.google-services") version "4.4.2" apply false
 }
 
 allprojects {

@@ -6,7 +6,7 @@ import '../widgets/google_maps_picker.dart';
 import '../services/location_service.dart';
 import '../services/address_service.dart';
 import '../services/backend_auth_service.dart';
-import 'home_page.dart';
+import 'main_screen.dart';
 import '../providers/season_provider.dart';
 import '../config/app_theme.dart';
 
@@ -17,82 +17,51 @@ class LocationSetupPage extends StatefulWidget {
   State<LocationSetupPage> createState() => _LocationSetupPageState();
 }
 
-class _LocationSetupPageState extends State<LocationSetupPage> {
+class _LocationSetupPageState extends State<LocationSetupPage>
+    with SingleTickerProviderStateMixin {
   SeasonTokens get t => SeasonScope.of(context).tokens;
   final LocationService _locationService = LocationService();
   final AddressService _addressService = AddressService();
-  final TextEditingController _phoneController = TextEditingController();
   bool _isLoading = false;
-  String _selectedCountry = 'Unknown';
+  late AnimationController _animController;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
 
-  final Map<String, String> _countryCodeMap = {
-    '+1': 'USA',
-    '+44': 'UK',
-    '+971': 'UAE',
-    '+966': 'Saudi Arabia',
-    '+20': 'Egypt',
-    '+965': 'Kuwait',
-    '+974': 'Qatar',
-    '+973': 'Bahrain',
-    '+968': 'Oman',
-    '+Jordan': 'Jordan',
-    '+962': 'Jordan',
-    '+Libya': 'Libya',
-    '+218': 'Libya',
-    '+212': 'Morocco',
-    '+213': 'Algeria',
-    '+216': 'Tunisia',
-    '+961': 'Lebanon',
-    '+963': 'Syria',
-    '+964': 'Iraq',
-  };
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _fadeAnim = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOut),
+    );
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.12),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+    );
+    _animController.forward();
+  }
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _animController.dispose();
     super.dispose();
   }
 
-  void _onPhoneChanged(String value) {
-    if (value.isEmpty) return;
-    String prefix = '';
-    if (value.startsWith('+')) {
-      if (value.length >= 4) {
-        prefix = value.substring(0, 4);
-        if (!_countryCodeMap.containsKey(prefix)) {
-          prefix = value.substring(0, 3);
-          if (!_countryCodeMap.containsKey(prefix)) {
-            prefix = value.substring(0, 2);
-          }
-        }
-      } else if (value.length >= 3) {
-        prefix = value.substring(0, 3);
-        if (!_countryCodeMap.containsKey(prefix)) {
-          prefix = value.substring(0, 2);
-        }
-      } else if (value.length >= 2) {
-        prefix = value.substring(0, 2);
-      }
-    }
-
-    if (_countryCodeMap.containsKey(prefix)) {
-      setState(() {
-        _selectedCountry = _countryCodeMap[prefix]!;
-      });
-    }
-  }
-
-  void _completeSetup() {
+  void _navigateToMain() {
     HapticFeedback.lightImpact();
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            const NordenHomePage(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 600),
+            const MainScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+            FadeTransition(opacity: animation, child: child),
+        transitionDuration: const Duration(milliseconds: 500),
       ),
     );
   }
@@ -103,8 +72,9 @@ class _LocationSetupPageState extends State<LocationSetupPage> {
 
     String city = 'Unknown';
     String country = 'Unknown';
+
     try {
-      List<Placemark> marks = await placemarkFromCoordinates(
+      final marks = await placemarkFromCoordinates(
         result['latitude'],
         result['longitude'],
       );
@@ -114,31 +84,39 @@ class _LocationSetupPageState extends State<LocationSetupPage> {
       }
     } catch (_) {}
 
-    // Save to local AddressService
+    // Get user's name from auth service (they already registered)
     final authService = BackendAuthService();
-    final userName = authService.currentUser?['displayName'] ?? 'User';
+    final userName = authService.currentUser?['displayName'] ??
+        authService.currentUser?['email'] ??
+        'User';
 
-    await _addressService.addAddress(
-      label: 'Home',
-      name: userName,
-      phone: _phoneController.text,
-      street: 'Selected via Map',
-      city: city,
-      country: country,
-      isDefault: true,
-    );
+    try {
+      // Save address locally
+      await _addressService.addAddress(
+        label: 'Home',
+        name: userName,
+        phone: '',
+        street: 'Selected via Map',
+        city: city,
+        country: country,
+        isDefault: true,
+      );
 
-    // Send to backend account endpoint
-    await _locationService.syncLocationToBackend(
-      latitude: result['latitude'],
-      longitude: result['longitude'],
-      city: city,
-      country: country,
-    );
+      // Sync location to backend
+      await _locationService.syncLocationToBackend(
+        latitude: result['latitude'],
+        longitude: result['longitude'],
+        city: city,
+        country: country,
+      );
+    } catch (e) {
+      debugPrint('Location save error: $e');
+      // Even if backend fails, save locally and proceed
+    }
 
-    await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) {
-      _completeSetup();
+      setState(() => _isLoading = false);
+      _navigateToMain();
     }
   }
 
@@ -148,11 +126,8 @@ class _LocationSetupPageState extends State<LocationSetupPage> {
 
     try {
       final position = await _locationService.getCurrentPosition();
-
       if (position != null && mounted) {
-        setState(() => _isLoading = false); // Done loading pos
-
-        // Open map focused on their location so they can verify and submit
+        setState(() => _isLoading = false);
         final result = await Navigator.push<Map<String, dynamic>>(
           context,
           MaterialPageRoute(
@@ -163,318 +138,303 @@ class _LocationSetupPageState extends State<LocationSetupPage> {
             ),
           ),
         );
-
         if (result != null && mounted) {
           await _processMapResult(result);
         }
       } else {
         if (mounted) {
+          setState(() => _isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to get location. Please try manually.'),
-              backgroundColor: Colors.red,
+            SnackBar(
+              content: Text(
+                'Could not get location. Try entering manually.',
+                style: GoogleFonts.inter(),
+              ),
+              backgroundColor: Colors.red.shade700,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Location error: $e'),
-            backgroundColor: Colors.red,
+            content: Text('Location error: $e', style: GoogleFonts.inter()),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _enterManually() async {
+  Future<void> _enterManually() async {
     HapticFeedback.lightImpact();
-
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(
         builder: (context) => const GoogleMapsPicker(initialLabel: 'Home'),
       ),
     );
-
     if (result != null && mounted) {
-      // User selected a location on the map, save to account
       await _processMapResult(result);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-      backgroundColor: t.bg,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 60),
-                // Header Map Graphic
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40.0),
-                  child: Container(
-                    height: 200,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          t.gold.withOpacity(0.2),
-                          t.bg,
-                        ],
-                      ),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.my_location_rounded,
-                        size: 80,
-                        color: t.gold,
-                      ),
-                    ),
-                  ),
+      backgroundColor: const Color(0xFF0A0A0A),
+      body: Stack(
+        children: [
+          // Gold radial glow background
+          Positioned(
+            top: -80,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 300,
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFD4AF37).withOpacity(0.08),
+                    Colors.transparent,
+                  ],
+                  radius: 1.0,
                 ),
+              ),
+            ),
+          ),
 
-                const SizedBox(height: 40),
-
-                // Titles
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnim,
+              child: SlideTransition(
+                position: _slideAnim,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
+                      const SizedBox(height: 32),
+
+                      // Icon Map
+                      Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFF1A1A1A),
+                          border: Border.all(
+                            color: const Color(0xFFD4AF37).withOpacity(0.3),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFD4AF37).withOpacity(0.15),
+                              blurRadius: 30,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.my_location_rounded,
+                          size: 44,
+                          color: Color(0xFFD4AF37),
+                        ),
+                      ),
+
+                      const SizedBox(height: 28),
+
+                      // Title
                       Text(
                         'Set Your Location',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.playfairDisplay(
                           color: Colors.white,
-                          fontSize: 32,
+                          fontSize: 30,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.5,
                         ),
                       ),
-                      const SizedBox(height: 16),
+
+                      const SizedBox(height: 12),
+
+                      // Subtitle
                       Text(
-                        'We use your location to provide personalized '
-                        'delivery estimates and store recommendations.',
+                        'Personalize your delivery estimates\nand discover nearby stores.',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
-                          color: Colors.white.withOpacity(0.6),
-                          fontSize: 15,
+                          color: Colors.white.withOpacity(0.55),
+                          fontSize: 14,
                           height: 1.6,
                         ),
                       ),
-                    ],
-                  ),
-                ),
 
-                const Spacer(),
+                      const SizedBox(height: 48),
 
-                // Phone number field
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Phone Number',
-                        style: GoogleFonts.inter(
-                          color: t.gold,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: t.gold.withOpacity(0.3),
-                          ),
-                        ),
-                        child: TextField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          onChanged: _onPhoneChanged,
-                          style: GoogleFonts.inter(color: Colors.white),
-                          decoration: InputDecoration(
-                            hintText: 'e.g. +971 50 123 4567',
-                            hintStyle: GoogleFonts.inter(
-                              color: Colors.white.withOpacity(0.2),
-                            ),
-                            prefixIcon: Icon(
-                              Icons.phone_outlined,
-                              color: t.gold,
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (_selectedCountry != 'Unknown')
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0, left: 4.0),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.public_rounded,
-                                color: t.gold,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Detected Region: $_selectedCountry',
-                                style: GoogleFonts.inter(
-                                  color: t.gold,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Buttons
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32.0,
-                    vertical: 40.0,
-                  ),
-                  child: Column(
-                    children: [
-                      // Use Current Location
-                      Container(
-                        width: double.infinity,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [t.gold, const Color(0xFFB8860B)],
-                          ),
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(
-                              color: t.gold.withOpacity(0.3),
-                              blurRadius: 15,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: TextButton(
-                          onPressed: _isLoading ? null : _useCurrentLocation,
-                          style: TextButton.styleFrom(
-                            foregroundColor: t.bg,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(28),
-                            ),
-                          ),
-                          child: _isLoading
-                              ? SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    color: t.bg,
-                                    strokeWidth: 2.5,
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.gps_fixed_rounded,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'Use Current Location',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
+                      // Use Current Location button
+                      _PrimaryButton(
+                        icon: Icons.gps_fixed_rounded,
+                        label: 'Use Current Location',
+                        isLoading: _isLoading,
+                        onTap: _isLoading ? null : _useCurrentLocation,
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
-                      // Enter Manually
-                      Container(
-                        width: double.infinity,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: TextButton(
-                          onPressed: _isLoading ? null : _enterManually,
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(28),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.map_outlined, size: 20),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Enter Location Manually',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      // Enter Manually button
+                      _SecondaryButton(
+                        icon: Icons.map_outlined,
+                        label: 'Pick on Map',
+                        isLoading: false,
+                        onTap: _isLoading ? null : _enterManually,
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 32),
 
                       // Skip
                       TextButton(
-                        onPressed: _isLoading ? null : _completeSetup,
+                        onPressed: _isLoading ? null : _navigateToMain,
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.white.withOpacity(0.5),
+                          foregroundColor: Colors.white.withOpacity(0.45),
+                          minimumSize: const Size(double.infinity, 44),
                         ),
                         child: Text(
                           'Skip for now',
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             decoration: TextDecoration.underline,
+                            decorationColor: Colors.white.withOpacity(0.4),
                           ),
                         ),
                       ),
+
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ],
+          ),
+
+          // Full-screen loading overlay
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFFD4AF37),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Reusable Buttons ───────────────────────────────────────────────────────
+
+class _PrimaryButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isLoading;
+  final VoidCallback? onTap;
+
+  const _PrimaryButton({
+    required this.icon,
+    required this.label,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 58,
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        icon: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.black,
+                  strokeWidth: 2.5,
+                ),
+              )
+            : Icon(icon, size: 20, color: Colors.black),
+        label: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+            color: Colors.black,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFD4AF37),
+          disabledBackgroundColor: const Color(0xFFD4AF37).withOpacity(0.5),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SecondaryButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isLoading;
+  final VoidCallback? onTap;
+
+  const _SecondaryButton({
+    required this.icon,
+    required this.label,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 58,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 20, color: Colors.white.withOpacity(0.8)),
+        label: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+            color: Colors.white.withOpacity(0.85),
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(
+            color: Colors.white.withOpacity(0.2),
+            width: 1.2,
+          ),
+          backgroundColor: Colors.white.withOpacity(0.05),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
         ),
       ),
     );

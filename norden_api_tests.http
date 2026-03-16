@@ -1,0 +1,158 @@
+### Test Norden API Endpoints
+
+@baseUrl = http://nordenstore.somee.com
+@token = 
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### 2. Register User
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Test123!",
+  "displayName": "Test User",
+  "phoneNumber": "+1234567890"
+}
+
+### 3. Login User
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@norden.com",
+  "password": "User123!"
+}
+
+### 4. Google Login
+POST {{baseUrl}}/api/auth/google
+Content-Type: application/json
+
+{
+  "idToken": "PUT_YOUR_GOOGLE_ID_TOKEN_HERE"
+}
+
+### 5. Get Products
+GET {{baseUrl}}/api/products?page=1&limit=10
+
+### 5. Get Product by ID
+GET {{baseUrl}}/api/products/{{productId}}
+
+### 6. Search Products
+GET {{baseUrl}}/api/search?q=cotton&page=1&limit=10
+
+### 7. Get Cart (requires authentication)
+GET {{baseUrl}}/api/cart
+Authorization: Bearer {{token}}
+
+### 8. Add to Cart (requires authentication)
+POST {{baseUrl}}/api/cart/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "productId": "{{productId}}",
+  "quantity": 2,
+  "selectedColor": "Blue",
+  "selectedSize": "L"
+}
+
+### 9. Get Wishlist (requires authentication)
+GET {{baseUrl}}/api/wishlist
+Authorization: Bearer {{token}}
+
+### 10. Add to Wishlist (requires authentication)
+POST {{baseUrl}}/api/wishlist/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "productId": "{{productId}}"
+}
+
+### 11. Get Addresses (requires authentication)
+GET {{baseUrl}}/api/addresses
+Authorization: Bearer {{token}}
+
+### 12. Create Address (requires authentication)
+POST {{baseUrl}}/api/addresses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Home",
+  "streetAddress": "123 Main St",
+  "city": "New York",
+  "state": "NY",
+  "country": "USA",
+  "postalCode": "10001",
+  "isDefault": true
+}
+
+### 13. Get Orders (requires authentication)
+GET {{baseUrl}}/api/orders?page=1&limit=10
+Authorization: Bearer {{token}}
+
+### 14. Create Order (requires authentication)
+POST {{baseUrl}}/api/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "productId": "{{productId}}",
+      "quantity": 2,
+      "selectedColor": "Blue",
+      "selectedSize": "L"
+    }
+  ],
+  "shippingAddress": {
+    "title": "Home",
+    "streetAddress": "123 Main St",
+    "city": "New York",
+    "state": "NY",
+    "country": "USA",
+    "postalCode": "10001"
+  },
+  "paymentMethod": "CreditCard",
+  "notes": "Please deliver during business hours"
+}
+
+### 15. Get Product Reviews
+GET {{baseUrl}}/api/reviews/products/{{productId}}?page=1&limit=10
+
+### 16. Create Review (requires authentication)
+POST {{baseUrl}}/api/reviews/products/{{productId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rating": 5,
+  "title": "Great product!",
+  "comment": "Love this product, highly recommend!",
+  "images": []
+}
+
+### 17. Admin Dashboard (requires admin authentication)
+GET {{baseUrl}}/api/admin/dashboard
+Authorization: Bearer {{adminToken}}
+
+### 18. Admin Products (requires admin authentication)
+GET {{baseUrl}}/api/admin/products
+Authorization: Bearer {{adminToken}}
+
+### 19. Admin Orders (requires admin authentication)
+GET {{baseUrl}}/api/admin/orders
+Authorization: Bearer {{adminToken}}
+
+### 20. Update Order Status (requires admin authentication)
+PUT {{baseUrl}}/api/admin/orders/{{orderId}}/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "Shipped"
+}

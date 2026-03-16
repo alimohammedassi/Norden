@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:slide_to_act/slide_to_act.dart';
 import '../services/api_service.dart';
 import 'login&sgin in/login.dart';
-import 'home_page.dart';
+import 'main_screen.dart';
 import '../services/backend_auth_service.dart';
 
 class NordenIntroPage extends StatefulWidget {
@@ -65,16 +65,16 @@ class _NordenIntroPageState extends State<NordenIntroPage>
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const NordenHomePage()),
+          MaterialPageRoute(builder: (context) => const MainScreen()),
         );
       }
     } on ApiException catch (e) {
       if (mounted) {
         if (e.code == 'NETWORK_ERROR') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const NordenHomePage()),
-          );
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const MainScreen()),
+            );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -95,7 +95,7 @@ class _NordenIntroPageState extends State<NordenIntroPage>
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const NordenHomePage()),
+          MaterialPageRoute(builder: (context) => const MainScreen()),
         );
       }
     } finally {

@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'signup.dart';
 import 'forgot_password.dart';
-import '../home_page.dart';
+
+import '../main_screen.dart';
 import '../admin/admin_dashboard.dart';
 import '../NordenIntroPage.dart';
 import '../../services/backend_auth_service.dart';
@@ -640,7 +641,7 @@ class _NordenLoginPageState extends State<NordenLoginPage>
           context,
           MaterialPageRoute(
             builder: (context) =>
-                isAdmin ? const AdminDashboard() : const NordenHomePage(),
+                isAdmin ? const AdminDashboard() : const MainScreen(),
           ),
         );
       }
@@ -667,7 +668,9 @@ class _NordenLoginPageState extends State<NordenLoginPage>
     HapticFeedback.mediumImpact();
 
     try {
+      debugPrint('Starting Google Sign-In process...');
       final userData = await _authService.signInWithGoogle();
+      debugPrint('Google Sign-In result: $userData');
 
       if (userData != null && mounted) {
         // Check if user is admin
@@ -677,17 +680,24 @@ class _NordenLoginPageState extends State<NordenLoginPage>
           context,
           MaterialPageRoute(
             builder: (context) =>
-                isAdmin ? const AdminDashboard() : const NordenHomePage(),
+                isAdmin ? const AdminDashboard() : const MainScreen(),
           ),
         );
+      } else {
+        // User returned null (cancelled)
+        debugPrint('Google Sign-In returned null - user likely cancelled');
       }
     } catch (e) {
+      debugPrint('Google Sign-In error caught: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_authService.getErrorMessage(e)),
+            content: Text(
+              'Google Sign-In failed: ${_authService.getErrorMessage(e)}',
+            ),
             backgroundColor: const Color(0xFFFF3B30),
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -738,7 +748,7 @@ class _NordenLoginPageState extends State<NordenLoginPage>
               Navigator.pop(context);
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const NordenHomePage()),
+                MaterialPageRoute(builder: (context) => const MainScreen()),
               );
             },
             style: ElevatedButton.styleFrom(

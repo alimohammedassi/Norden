@@ -5,11 +5,16 @@
 class ApiConfig {
   // ── Base URL ──────────────────────────────────────────────────────────────
   // Production backend server
-  static const String baseUrl = 'http://www.nordenstore.somee.com/api';
+  static const String baseUrl = 'http://nordenstore.somee.com/api';
 
   // ── Endpoints ─────────────────────────────────────────────────────────────
   static const String authEndpoint = '$baseUrl/auth';
+  static const String loginEndpoint = '$authEndpoint/login';
+  static const String registerEndpoint = '$authEndpoint/register';
+  static const String googleLoginEndpoint = '$authEndpoint/google';
+  
   static const String productsEndpoint = '$baseUrl/products';
+  static const String searchEndpoint = '$baseUrl/search';
   static const String categoriesEndpoint = '$baseUrl/categories';
   static const String seasonsEndpoint = '$baseUrl/seasons';
   static const String cartEndpoint = '$baseUrl/cart';
@@ -21,6 +26,7 @@ class ApiConfig {
   static const String onboardingEndpoint = '$baseUrl/onboarding';
   static const String bannersEndpoint = '$baseUrl/banners';
   static const String locationEndpoint = '$baseUrl/location';
+  static const String usersEndpoint = '$baseUrl/users';
 
   // ── Headers ───────────────────────────────────────────────────────────────
   static Map<String, String> getAuthHeaders(String token) => {

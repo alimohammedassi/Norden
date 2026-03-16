@@ -4,10 +4,12 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/wishlist_service.dart';
 import '../models/wishlist_item.dart';
 import '../config/app_theme.dart';
+import 'main_screen.dart';
 
 /// Dedicated Wishlist screen — animated, luxury dark theme
 class WishlistPage extends StatefulWidget {
-  const WishlistPage({Key? key}) : super(key: key);
+  final bool showBackButton;
+  const WishlistPage({Key? key, this.showBackButton = true}) : super(key: key);
 
   @override
   State<WishlistPage> createState() => _WishlistPageState();
@@ -122,12 +124,14 @@ class _WishlistPageState extends State<WishlistPage>
       child: Row(
         children: [
           // Back button
-          _CircleButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onTap: () => Navigator.pop(context),
-            tokens: t,
-          ),
-          const SizedBox(width: 16),
+          if (widget.showBackButton) ...[
+            _CircleButton(
+              icon: Icons.arrow_back_ios_new_rounded,
+              onTap: () => Navigator.pop(context),
+              tokens: t,
+            ),
+            const SizedBox(width: 16),
+          ],
           Expanded(
             child: AnimatedBuilder(
               animation: _shimmerAnim,
@@ -223,7 +227,17 @@ class _WishlistPageState extends State<WishlistPage>
           ),
           const SizedBox(height: 36),
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () {
+              if (widget.showBackButton) {
+                Navigator.pop(context);
+              } else {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MainScreen()),
+                  (route) => false,
+                );
+              }
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 16),
               decoration: BoxDecoration(
@@ -255,7 +269,7 @@ class _WishlistPageState extends State<WishlistPage>
 
   Widget _buildGrid(List<WishlistItem> items, SeasonTokens t) {
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         childAspectRatio: 0.66,

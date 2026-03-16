@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'product_details.dart';
 import '../services/cart_service.dart';
-import '../services/product_service.dart';
+import '../services/backend_product_service.dart';
 import '../services/wishlist_service.dart';
 import '../services/backend_category_service.dart';
 import '../models/product.dart';
@@ -12,13 +12,15 @@ import '../config/app_theme.dart';
 import 'cart_page.dart';
 import 'profile_page.dart';
 import 'wishlist_page.dart';
+import 'search_page.dart';
 import '../providers/season_provider.dart';
 
 // ─────────────────────────────────────────────────────────
 //  MAIN PAGE
 // ─────────────────────────────────────────────────────────
 class NordenHomePage extends StatefulWidget {
-  const NordenHomePage({Key? key}) : super(key: key);
+  final bool showNavIcons;
+  const NordenHomePage({Key? key, this.showNavIcons = true}) : super(key: key);
   @override
   State<NordenHomePage> createState() => _NordenHomePageState();
 }
@@ -54,7 +56,7 @@ class _NordenHomePageState extends State<NordenHomePage>
   bool _catsLoading = false;
 
   // ── Services ──────────────────────────────────────────
-  final _productService = ProductService();
+  final _productService = BackendProductService();
   final _cartService = CartService();
   final _wishlistService = WishlistService();
   final _categoryService = BackendCategoryService();
@@ -164,7 +166,7 @@ class _NordenHomePageState extends State<NordenHomePage>
             curve: const Interval(0.1, 0.9, curve: Curves.easeOutQuart),
           ),
         );
-    _shimmerAnim = Tween<double>(begin: -2.0, end: 2.0).animate(_shimmerCtrl);
+    _shimmerAnim = Tween<double>(begin: 0.0, end: 1.0).animate(_shimmerCtrl);
     _seasonFade = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -239,6 +241,7 @@ class _NordenHomePageState extends State<NordenHomePage>
     'image': p.images.isNotEmpty
         ? p.images[0]
         : 'assets/images/Double-breasted_blazer.jpg',
+    'imageUrl': p.images.isNotEmpty ? p.images[0] : '',
     'category': p.category,
     'rating': p.rating,
     'reviewCount': p.reviewCount,
@@ -253,10 +256,7 @@ class _NordenHomePageState extends State<NordenHomePage>
   };
 
   void _loadSampleProducts() {
-    final sp = Product.getSampleProducts();
-    _products
-      ..clear()
-      ..addAll(sp.map(toMap));
+    _products.clear();
     if (mounted) setState(() {});
   }
 
@@ -266,14 +266,11 @@ class _NordenHomePageState extends State<NordenHomePage>
       if (!mounted) return;
       setState(() {
         _products.clear();
-        _products.addAll(
-          ps.isNotEmpty
-              ? ps.map(toMap)
-              : Product.getSampleProducts().map(toMap),
-        );
+        _products.addAll(ps.map(toMap));
       });
     } catch (_) {
-      if (mounted) setState(_loadSampleProducts);
+      // Empty fallback instead of loading fake products
+      if (mounted) setState(() { _products.clear(); });
     }
   }
 
@@ -387,16 +384,11 @@ class _NordenHomePageState extends State<NordenHomePage>
                   // ── Section Label
                   SliverToBoxAdapter(child: _buildSectionLabel(t)),
 
-                  // ── Category Tabs
-                  SliverToBoxAdapter(
-                    child: FadeTransition(
-                      opacity: _fadeAnim,
-                      child: _buildCategoryTabs(t),
-                    ),
-                  ),
-
                   // ── Product Count Row
                   SliverToBoxAdapter(child: _buildCountRow(t)),
+
+                  // ── Category Section (separate block while scrolling)
+                  SliverToBoxAdapter(child: _buildCategorySection(t)),
 
                   // ── Product Grid
                   SliverPadding(
@@ -415,6 +407,7 @@ class _NordenHomePageState extends State<NordenHomePage>
                           product: p,
                           onTap: () => _goProduct(p),
                           wishlistService: _wishlistService,
+                          cartService: _cartService,
                           index: i,
                           tokens: t,
                         );
@@ -422,7 +415,7 @@ class _NordenHomePageState extends State<NordenHomePage>
                     ),
                   ),
 
-                  const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 120)),
                 ],
               ),
             ),
@@ -487,34 +480,42 @@ class _NordenHomePageState extends State<NordenHomePage>
               onTap: _showSearch,
               tokens: t,
             ),
-            const SizedBox(width: 8),
-            _HeaderIcon(
-              icon: Icons.favorite_border_rounded,
-              onTap: () {
-                HapticFeedback.lightImpact();
-                Navigator.push(context, _fadeSlide(() => const WishlistPage()));
-              },
-              tokens: t,
-            ),
-            const SizedBox(width: 8),
-            _HeaderIcon(
-              icon: Icons.person_outline_rounded,
-              onTap: () {
-                HapticFeedback.lightImpact();
-                Navigator.push(context, _fadeSlide(() => const ProfilePage()));
-              },
-              tokens: t,
-            ),
-            const SizedBox(width: 8),
-            _HeaderIcon(
-              icon: Icons.shopping_bag_outlined,
-              badge: _cartService.itemCount,
-              onTap: () {
-                HapticFeedback.lightImpact();
-                Navigator.push(context, _fadeSlide(() => const CartPage()));
-              },
-              tokens: t,
-            ),
+            if (widget.showNavIcons) ...[
+              const SizedBox(width: 8),
+              _HeaderIcon(
+                icon: Icons.favorite_border_rounded,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.push(
+                    context,
+                    _fadeSlide(() => const WishlistPage()),
+                  );
+                },
+                tokens: t,
+              ),
+              const SizedBox(width: 8),
+              _HeaderIcon(
+                icon: Icons.person_outline_rounded,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.push(
+                    context,
+                    _fadeSlide(() => const ProfilePage()),
+                  );
+                },
+                tokens: t,
+              ),
+              const SizedBox(width: 8),
+              _HeaderIcon(
+                icon: Icons.shopping_bag_outlined,
+                badge: _cartService.itemCount,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.push(context, _fadeSlide(() => const CartPage()));
+                },
+                tokens: t,
+              ),
+            ],
           ],
         ),
       ),
@@ -558,6 +559,35 @@ class _NordenHomePageState extends State<NordenHomePage>
 
   // ── Carousel ─────────────────────────────────────────
   Widget _buildCarousel(SeasonTokens t) {
+    // Blend announcements with featured products (images from backend)
+    final featuredProducts = _products
+        .where((p) => p['isFeatured'] == true || p['isNew'] == true)
+        .take(4)
+        .toList();
+
+    // Build slides: start with the editorial announcements, append product slides
+    final announcementSlides = _announcements.map((a) => {
+      'title': a['title'],
+      'subtitle': a['subtitle'],
+      'description': a['description'],
+      'badge': a['badge'],
+      'image': a['image'],
+      'isProduct': false,
+    }).toList();
+
+    final productSlides = featuredProducts.map((p) => {
+      'title': (p['name'] as String? ?? '').toUpperCase(),
+      'subtitle': p['category'] as String? ?? '',
+      'description': p['description'] as String? ?? 'Discover this exclusive piece',
+      'badge': p['isNew'] == true ? 'NEW ARRIVAL' : 'FEATURED',
+      'image': p['image'] as String? ?? '',
+      'isProduct': true,
+      'product': p,
+    }).toList();
+
+    final slides = [...announcementSlides, ...productSlides];
+    if (slides.isEmpty) return const SizedBox.shrink();
+
     return Column(
       children: [
         SizedBox(
@@ -566,17 +596,17 @@ class _NordenHomePageState extends State<NordenHomePage>
             controller: _pageCtrl,
             itemCount: 9999,
             onPageChanged: (i) =>
-                setState(() => _currentSlide = i % _announcements.length),
+                setState(() => _currentSlide = i % slides.length),
             itemBuilder: (_, i) {
-              final a = _announcements[i % _announcements.length];
-              return _CarouselCard(data: a, tokens: t);
+              final a = slides[i % slides.length];
+              return _CarouselCard(data: a, tokens: t, onTap: a['isProduct'] == true ? () => _goProduct(a['product'] as Map<String, dynamic>) : null);
             },
           ),
         ),
         const SizedBox(height: 14),
         _SlideIndicator(
-          current: _currentSlide,
-          total: _announcements.length,
+          current: _currentSlide % slides.length,
+          total: slides.length,
           tokens: t,
         ),
         const SizedBox(height: 6),
@@ -623,6 +653,69 @@ class _NordenHomePageState extends State<NordenHomePage>
             ),
           ),
           Expanded(child: _GradientDivider(leftToRight: false, tokens: t)),
+        ],
+      ),
+    );
+  }
+
+  // ── Category Section (separate section while scrolling) ──────────────────
+  Widget _buildCategorySection(SeasonTokens t) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+      decoration: BoxDecoration(
+        color: t.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: t.gold.withOpacity(0.18), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: t.gold.withOpacity(0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 3,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [t.goldLight, t.goldDark],
+                    ),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'BROWSE BY CATEGORY',
+                  style: GoogleFonts.cormorantGaramond(
+                    color: t.text,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2.5,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.grid_view_rounded, color: t.gold.withOpacity(0.5), size: 16),
+              ],
+            ),
+          ),
+          const SizedBox(height: 2),
+          _buildCategoryTabs(t),
+          const SizedBox(height: 14),
         ],
       ),
     );
@@ -759,16 +852,10 @@ class _NordenHomePageState extends State<NordenHomePage>
   }
 
   void _showSearch() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => _SearchSheet(
-        tokens: t,
-        onSearch: (q) {
-          // TODO: wire to BackendProductService.searchProducts(query: q)
-        },
-      ),
+    HapticFeedback.lightImpact();
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SearchPage()),
     );
   }
 }
@@ -840,9 +927,9 @@ class _AnimatedLogo extends StatelessWidget {
         shaderCallback: (bounds) => LinearGradient(
           colors: [t.gold, t.goldLight, t.gold],
           stops: [
-            (shimmerAnim.value - 0.3).clamp(0.0, 1.0),
-            shimmerAnim.value.clamp(0.0, 1.0),
-            (shimmerAnim.value + 0.3).clamp(0.0, 1.0),
+            (shimmerAnim.value - 0.3).clamp(0.0, 0.4),
+            (shimmerAnim.value).clamp(0.3, 0.7),
+            (shimmerAnim.value + 0.3).clamp(0.6, 1.0),
           ],
         ).createShader(bounds),
         child: Column(
@@ -866,7 +953,7 @@ class _AnimatedLogo extends StatelessWidget {
                 Text(
                   'MAISON DE LUXE',
                   style: GoogleFonts.cormorantGaramond(
-                    fontSize: 5,
+                    fontSize: 10,
                     color: t.gold.withOpacity(0.6),
                     letterSpacing: 3,
                   ),
@@ -953,12 +1040,15 @@ class _HeaderIcon extends StatelessWidget {
 class _CarouselCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final SeasonTokens tokens;
-  const _CarouselCard({required this.data, required this.tokens});
+  final VoidCallback? onTap;
+  const _CarouselCard({required this.data, required this.tokens, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final t = tokens;
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.all(Radius.circular(20)),
@@ -1072,6 +1162,8 @@ class _CarouselCard extends StatelessWidget {
                     children: [
                       Text(
                         data['subtitle'],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.cormorantGaramond(
                           fontSize: 11,
                           color: t.gold.withOpacity(0.85),
@@ -1081,6 +1173,8 @@ class _CarouselCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         data['title'],
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.cormorantGaramond(
                           fontSize: 34,
                           fontWeight: FontWeight.w700,
@@ -1092,6 +1186,8 @@ class _CarouselCard extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         data['description'],
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.cormorantGaramond(
                           fontSize: 13,
                           color: Colors.white.withOpacity(0.75),
@@ -1140,8 +1236,9 @@ class _CarouselCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      ), // closes ClipRRect
+      ), // closes Container
+    ); // closes GestureDetector
   }
 
   Widget _buildImage(String path) {
@@ -1338,12 +1435,15 @@ class _ProductCard extends StatefulWidget {
   final Map<String, dynamic> product;
   final VoidCallback onTap;
   final WishlistService wishlistService;
+  final CartService cartService; // NEW — for quick-add
   final int index;
   final SeasonTokens tokens;
+
   const _ProductCard({
     required this.product,
     required this.onTap,
     required this.wishlistService,
+    required this.cartService,
     required this.index,
     required this.tokens,
   });
@@ -1353,23 +1453,71 @@ class _ProductCard extends StatefulWidget {
 }
 
 class _ProductCardState extends State<_ProductCard>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
+  // ── State ─────────────────────────────────────────────────────────────────
   bool _inWish = false;
+  bool _addedToCart = false;
+  bool _isPressed = false;
+  int _selectedColorIndex = 0;
+
+  // ── Controllers ───────────────────────────────────────────────────────────
   late AnimationController _heartCtrl;
+  late AnimationController _entryCtrl;
+  late AnimationController _cartCtrl;
+
   late Animation<double> _heartScale;
+  late Animation<double> _entryOpacity;
+  late Animation<Offset> _entrySlide;
+  late Animation<double> _cartScale;
 
   @override
   void initState() {
     super.initState();
+
+    // Heart bounce
     _heartCtrl = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 380),
       vsync: this,
     );
     _heartScale = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.5), weight: 40),
-      TweenSequenceItem(tween: Tween(begin: 1.5, end: 0.9), weight: 30),
-      TweenSequenceItem(tween: Tween(begin: 0.9, end: 1.0), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.45), weight: 35),
+      TweenSequenceItem(tween: Tween(begin: 1.45, end: 0.88), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 0.88, end: 1.0), weight: 35),
     ]).animate(CurvedAnimation(parent: _heartCtrl, curve: Curves.easeInOut));
+
+    // Staggered card entry — fade + slide from bottom-right
+    _entryCtrl = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _entryOpacity = CurvedAnimation(
+      parent: _entryCtrl,
+      curve: const Interval(0.0, 0.7, curve: Curves.easeOut),
+    );
+    _entrySlide = Tween<Offset>(
+      begin: const Offset(0.0, 0.08),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entryCtrl,
+      curve: const Interval(0.0, 0.9, curve: Curves.easeOutCubic),
+    ));
+
+    // Quick-add micro-animation
+    _cartCtrl = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _cartScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.78), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 0.78, end: 1.12), weight: 45),
+      TweenSequenceItem(tween: Tween(begin: 1.12, end: 1.0), weight: 35),
+    ]).animate(CurvedAnimation(parent: _cartCtrl, curve: Curves.easeInOut));
+
+    // Staggered reveal
+    Future.delayed(Duration(milliseconds: 60 + widget.index * 55), () {
+      if (mounted) _entryCtrl.forward();
+    });
+
     _sync();
     widget.wishlistService.addListener(_sync);
   }
@@ -1378,16 +1526,19 @@ class _ProductCardState extends State<_ProductCard>
   void dispose() {
     widget.wishlistService.removeListener(_sync);
     _heartCtrl.dispose();
+    _entryCtrl.dispose();
+    _cartCtrl.dispose();
     super.dispose();
   }
 
   void _sync() {
     final id = widget.product['id']?.toString();
-    if (id != null && mounted)
+    if (id != null && mounted) {
       setState(() => _inWish = widget.wishlistService.isInWishlistSync(id));
+    }
   }
 
-  Future<void> toggleWish() async {
+  Future<void> _toggleWish() async {
     final id = widget.product['id']?.toString();
     if (id == null) return;
     HapticFeedback.lightImpact();
@@ -1399,12 +1550,98 @@ class _ProductCardState extends State<_ProductCard>
     }
   }
 
+  Future<void> _quickAddToCart() async {
+    if (_isOutOfStock) return;
+    HapticFeedback.mediumImpact();
+    await _cartCtrl.forward(from: 0);
+    if (mounted) {
+      setState(() => _addedToCart = true);
+
+      final colors = widget.product['colors'] as List?;
+      widget.cartService.addItem(
+        productId: widget.product['id']?.toString() ?? '',
+        quantity: 1,
+        selectedColor: colors != null && colors.isNotEmpty ? colors[0].toString() : 'Default',
+        selectedSize: 'M',
+        productName: widget.product['name']?.toString(),
+        price: (widget.product['price'] as num?)?.toDouble(),
+        imageUrl: widget.product['imageUrl']?.toString() ?? widget.product['image']?.toString(),
+      );
+
+      // Animate the cart icon back after 1.5s
+      await Future.delayed(const Duration(milliseconds: 1500));
+      if (mounted) setState(() => _addedToCart = false);
+    }
+  }
+
+  // ── Derived ───────────────────────────────────────────────────────────────
+  bool get _isOutOfStock => widget.product['outOfStock'] == true;
+  bool get _isNew => widget.product['isNew'] == true;
+  double? get _originalPrice => (widget.product['originalPrice'] as num?)?.toDouble();
+  double get _price => (widget.product['price'] ?? 0).toDouble();
+  bool get _onSale =>
+      _originalPrice != null && _originalPrice! > _price;
+  int get _discountPct =>
+      _onSale ? ((_originalPrice! - _price) / _originalPrice! * 100).round() : 0;
+
+  List<Color> get _colorVariants {
+    final raw = widget.product['colors'] as List<dynamic>?;
+    if (raw == null || raw.isEmpty) return [];
+    final result = <Color>[];
+    for (final c in raw) {
+      final color = _parseColor(c.toString());
+      if (color != null) result.add(color);
+    }
+    return result;
+  }
+
+  static Color? _parseColor(String value) {
+    // Handle hex: #RRGGBB or #AARRGGBB
+    final hex = value.trim().replaceFirst('#', '');
+    if (hex.length == 6 || hex.length == 8) {
+      final padded = hex.length == 6 ? 'FF$hex' : hex;
+      final parsed = int.tryParse(padded, radix: 16);
+      if (parsed != null) return Color(parsed);
+    }
+    // Handle named colors
+    const namedColors = {
+      'red': Color(0xFFE53935),
+      'blue': Color(0xFF1E88E5),
+      'green': Color(0xFF43A047),
+      'black': Color(0xFF212121),
+      'white': Color(0xFFF5F5F5),
+      'grey': Color(0xFF757575),
+      'gray': Color(0xFF757575),
+      'navy': Color(0xFF1A237E),
+      'yellow': Color(0xFFFDD835),
+      'orange': Color(0xFFE65100),
+      'pink': Color(0xFFEC407A),
+      'purple': Color(0xFF7B1FA2),
+      'brown': Color(0xFF5D4037),
+      'beige': Color(0xFFF5F0E8),
+      'khaki': Color(0xFFC8B96E),
+      'gold': Color(0xFFD4A843),
+      'silver': Color(0xFFB0BEC5),
+      'cream': Color(0xFFFFF8E1),
+      'ivory': Color(0xFFFFFAF0),
+      'olive': Color(0xFF827717),
+      'teal': Color(0xFF00695C),
+      'cyan': Color(0xFF00ACC1),
+      'indigo': Color(0xFF283593),
+      'maroon': Color(0xFF880E4F),
+      'charcoal': Color(0xFF37474F),
+    };
+    return namedColors[value.trim().toLowerCase()];
+  }
+
+  // ── Image helpers ─────────────────────────────────────────────────────────
   Widget _img(String path) {
     if (path.startsWith('http')) {
       return Image.network(
         path,
         fit: BoxFit.cover,
-        loadingBuilder: (_, child, p) => p == null ? child : _loadingShimmer(),
+        loadingBuilder: (_, child, p) =>
+            p == null ? child : _loadingShimmer(),
         errorBuilder: (_, __, ___) => _errorPlaceholder(),
       );
     }
@@ -1421,11 +1658,11 @@ class _ProductCardState extends State<_ProductCard>
       color: t.surface2,
       child: Center(
         child: SizedBox(
-          width: 20,
-          height: 20,
+          width: 18,
+          height: 18,
           child: CircularProgressIndicator(
             strokeWidth: 1.5,
-            color: t.gold.withOpacity(0.5),
+            color: t.gold.withOpacity(0.4),
           ),
         ),
       ),
@@ -1436,251 +1673,442 @@ class _ProductCardState extends State<_ProductCard>
     final t = widget.tokens;
     return Container(
       color: t.surface2,
-      child: Icon(
-        Icons.image_not_supported_outlined,
-        color: t.gold.withOpacity(0.2),
-        size: 32,
+      child: Center(
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          color: t.gold.withOpacity(0.2),
+          size: 28,
+        ),
       ),
     );
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // BUILD
+  // ══════════════════════════════════════════════════════════════════════════
+
   @override
   Widget build(BuildContext context) {
-    final p = widget.product;
     final t = widget.tokens;
-    final name = p['name'] ?? '';
-    final price = (p['price'] ?? 0).toStringAsFixed(0);
-    final rating = (p['rating'] ?? 4.8) as double;
-    final reviewCount = (p['reviewCount'] ?? 0) as int;
-    final isNew = p['isNew'] == true;
-    final image = p['image'] as String? ?? '';
+    final image = widget.product['image'] as String? ?? '';
 
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 250 + widget.index * 40),
-        curve: Curves.easeOut,
-        decoration: BoxDecoration(
-          color: t.surface,
-          borderRadius: const BorderRadius.all(Radius.circular(20)),
-          border: Border.all(color: t.border, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.35),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Image Area (60%)
-            Expanded(
-              flex: 60,
-              child: Stack(
+    return FadeTransition(
+      opacity: _entryOpacity,
+      child: SlideTransition(
+        position: _entrySlide,
+        child: GestureDetector(
+          onTap: _isOutOfStock ? null : widget.onTap,
+          onTapDown: (_) => setState(() => _isPressed = true),
+          onTapUp: (_) =>
+              Future.delayed(const Duration(milliseconds: 120),
+                  () { if (mounted) setState(() => _isPressed = false); }),
+          onTapCancel: () => setState(() => _isPressed = false),
+          child: AnimatedScale(
+            scale: _isPressed ? 0.96 : 1.0,
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              decoration: BoxDecoration(
+                color: t.surface,
+                borderRadius: const BorderRadius.all(Radius.circular(20)),
+                border: Border.all(
+                  color: _isPressed
+                      ? t.gold.withOpacity(0.35)
+                      : t.border,
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.4),
+                    blurRadius: _isPressed ? 8 : 20,
+                    offset: Offset(0, _isPressed ? 3 : 8),
+                  ),
+                  if (!_isOutOfStock && !_isPressed)
+                    BoxShadow(
+                      color: t.gold.withOpacity(0.04),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                    ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Full image
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(20),
-                      ),
-                      child: Hero(
-                        tag: 'product_${p['id']}',
-                        child: _img(image),
-                      ),
-                    ),
+                  // ── Image zone (flexible ~62%)
+                  Expanded(
+                    flex: 62,
+                    child: _buildImageZone(image, t),
                   ),
-                  // Bottom gradient
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: 70,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            Colors.black.withOpacity(0.7),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // NEW badge
-                  if (isNew)
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [t.goldLight, t.goldDark],
-                          ),
-                          borderRadius: const BorderRadius.all(
-                            Radius.circular(32),
-                          ),
-                        ),
-                        child: Text(
-                          'NEW',
-                          style: GoogleFonts.cormorantGaramond(
-                            color: t.bg,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  // Heart button
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: AnimatedBuilder(
-                      animation: _heartScale,
-                      builder: (_, __) => Transform.scale(
-                        scale: _heartScale.value,
-                        child: GestureDetector(
-                          onTap: toggleWish,
-                          child: Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: t.bg.withOpacity(0.85),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: t.border, width: 1),
-                            ),
-                            child: Icon(
-                              _inWish
-                                  ? Icons.favorite
-                                  : Icons.favorite_border_rounded,
-                              size: 16,
-                              color: _inWish
-                                  ? SeasonTokens.red
-                                  : t.gold.withOpacity(0.75),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Price pill
-                  Positioned(
-                    bottom: 10,
-                    left: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: t.bg.withOpacity(0.9),
-                        borderRadius: const BorderRadius.all(
-                          Radius.circular(32),
-                        ),
-                        border: Border.all(
-                          color: t.gold.withOpacity(0.25),
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        '\$$price',
-                        style: GoogleFonts.cormorantGaramond(
-                          color: t.gold,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
+                  // ── Info zone (flexible ~38%)
+                  Expanded(
+                    flex: 38,
+                    child: _buildInfoZone(t),
                   ),
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
 
-            // ── Info Area (40%)
-            Expanded(
-              flex: 40,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.cormorantGaramond(
-                          color: t.text,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          height: 1.25,
-                        ),
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Icon(Icons.star_rounded, size: 13, color: t.gold),
-                              const SizedBox(width: 4),
-                              Text(
-                                rating.toStringAsFixed(1),
-                                style: GoogleFonts.cormorantGaramond(
-                                  color: t.gold.withOpacity(0.8),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  '(${reviewCount > 999 ? '999+' : reviewCount})',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.cormorantGaramond(
-                                    color: t.subtext,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Arrow
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: t.gold.withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 12,
-                            color: t.gold.withOpacity(0.8),
-                          ),
-                        ),
-                      ],
-                    ),
+  // ── Image zone ─────────────────────────────────────────────────────────────
+  Widget _buildImageZone(String image, SeasonTokens t) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Product image with Hero
+          Hero(
+            tag: 'product_${widget.product['id']}',
+            child: _img(image),
+          ),
+
+          // Bottom gradient — taller for better readability
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 90,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.75),
+                    Colors.transparent,
                   ],
+                  stops: const [0.0, 1.0],
                 ),
               ),
             ),
-          ],
+          ),
+
+          // Out of stock overlay
+          if (_isOutOfStock)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.5),
+                alignment: Alignment.center,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.85),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.15),
+                    ),
+                  ),
+                  child: Text(
+                    'OUT OF STOCK',
+                    style: GoogleFonts.dmMono(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 9,
+                      letterSpacing: 2,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Top row: badge (left) + heart (right)
+          Positioned(
+            top: 9,
+            left: 10,
+            right: 9,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // NEW or SALE badge — only one at a time
+                if (_isNew && !_onSale)
+                  _buildBadge(
+                    'NEW',
+                    gradient: LinearGradient(
+                      colors: [t.goldLight, t.goldDark],
+                    ),
+                    textColor: Colors.black,
+                  )
+                else if (_onSale)
+                  _buildBadge(
+                    '−$_discountPct%',
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF6B5A), Color(0xFFFF3B30)],
+                    ),
+                    textColor: Colors.white,
+                  )
+                else
+                  const SizedBox.shrink(),
+
+                // Animated heart button
+                AnimatedBuilder(
+                  animation: _heartScale,
+                  builder: (_, __) => Transform.scale(
+                    scale: _heartScale.value,
+                    child: GestureDetector(
+                      onTap: _toggleWish,
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: t.bg.withOpacity(0.82),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: _inWish
+                                ? SeasonTokens.red.withOpacity(0.4)
+                                : t.border,
+                            width: 1,
+                          ),
+                        ),
+                        child: Icon(
+                          _inWish
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_outline_rounded,
+                          size: 15,
+                          color: _inWish
+                              ? SeasonTokens.red
+                              : t.gold.withOpacity(0.7),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Bottom row: price (left) + quick-add (right)
+          Positioned(
+            bottom: 9,
+            left: 10,
+            right: 10,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Price pill — shows original crossed-out if on sale
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: t.bg.withOpacity(0.88),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: t.gold.withOpacity(0.22),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_onSale) ...[
+                        Text(
+                          '\$${_originalPrice!.toStringAsFixed(0)}',
+                          style: GoogleFonts.dmMono(
+                            color: t.gold.withOpacity(0.35),
+                            fontSize: 9,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Text(
+                        '\$${_price.toStringAsFixed(0)}',
+                        style: GoogleFonts.cormorantGaramond(
+                          color: t.gold,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Spacer(),
+
+                // Quick-add button with animated feedback
+                if (!_isOutOfStock)
+                  AnimatedBuilder(
+                    animation: _cartCtrl,
+                    builder: (_, __) => Transform.scale(
+                      scale: _cartScale.value,
+                      child: GestureDetector(
+                        onTap: _quickAddToCart,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 260),
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: _addedToCart
+                                  ? [
+                                      const Color(0xFF30D158),
+                                      const Color(0xFF25B44A),
+                                    ]
+                                  : [t.goldLight, t.goldDark],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (_addedToCart
+                                    ? const Color(0xFF30D158)
+                                    : t.gold)
+                                    .withOpacity(0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            _addedToCart
+                                ? Icons.check_rounded
+                                : Icons.add_rounded,
+                            size: 15,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Info zone ──────────────────────────────────────────────────────────────
+  Widget _buildInfoZone(SeasonTokens t) {
+    final name = widget.product['name'] as String? ?? '';
+    final rating = (widget.product['rating'] ?? 4.8) as double;
+    final reviewCount = (widget.product['reviewCount'] ?? 0) as int;
+    final colors = _colorVariants;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(11, 9, 11, 11),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Product name — 2 lines max, larger + more readable
+          Expanded(
+            child: Text(
+              name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.cormorantGaramond(
+                color: _isOutOfStock
+                    ? t.text.withOpacity(0.4)
+                    : t.text,
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
+              ),
+            ),
+          ),
+
+          // Bottom row: stars (left) + color dots (right)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Stars + rating
+              Icon(Icons.star_rounded, size: 12, color: t.gold),
+              const SizedBox(width: 3),
+              Text(
+                rating.toStringAsFixed(1),
+                style: GoogleFonts.dmMono(
+                  color: t.gold.withOpacity(0.85),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(width: 3),
+              Flexible(
+                child: Text(
+                  '(${reviewCount > 999 ? '999+' : reviewCount})',
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.dmMono(
+                    color: t.subtext,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+
+              const Spacer(),
+
+              // Color variant dots
+              if (colors.isNotEmpty)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(
+                    colors.length.clamp(0, 4),
+                    (i) => GestureDetector(
+                      onTap: () => setState(() => _selectedColorIndex = i),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        width: 9,
+                        height: 9,
+                        margin: const EdgeInsets.only(left: 4),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colors[i],
+                          border: Border.all(
+                            color: _selectedColorIndex == i
+                                ? t.gold.withOpacity(0.7)
+                                : Colors.white.withOpacity(0.15),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Badge helper ──────────────────────────────────────────────────────────
+  Widget _buildBadge(
+    String label, {
+    required Gradient gradient,
+    required Color textColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.dmMono(
+          color: textColor,
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.8,
         ),
       ),
     );
@@ -1800,143 +2228,4 @@ class _SortOption extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────
-//  SEARCH BOTTOM SHEET
-// ─────────────────────────────────────────────────────────
-class _SearchSheet extends StatefulWidget {
-  final Function(String) onSearch;
-  final SeasonTokens tokens;
-  const _SearchSheet({required this.onSearch, required this.tokens});
 
-  @override
-  State<_SearchSheet> createState() => _SearchSheetState();
-}
-
-class _SearchSheetState extends State<_SearchSheet> {
-  final _ctrl = TextEditingController();
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = widget.tokens;
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: t.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border(top: BorderSide(color: t.border, width: 1)),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: t.border,
-                  borderRadius: const BorderRadius.all(Radius.circular(32)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 22),
-            Text(
-              'SEARCH',
-              style: GoogleFonts.cormorantGaramond(
-                color: t.gold,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 3,
-              ),
-            ),
-            const SizedBox(height: 18),
-            Container(
-              decoration: BoxDecoration(
-                color: t.surface2,
-                borderRadius: const BorderRadius.all(Radius.circular(16)),
-                border: Border.all(color: t.border),
-              ),
-              child: TextField(
-                controller: _ctrl,
-                autofocus: true,
-                style: GoogleFonts.inter(color: t.text, fontSize: 15),
-                cursorColor: t.gold,
-                decoration: InputDecoration(
-                  hintText: 'Search NORDEN collections...',
-                  hintStyle: GoogleFonts.inter(color: t.subtext, fontSize: 14),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search_rounded,
-                    color: t.gold.withOpacity(0.6),
-                    size: 20,
-                  ),
-                  suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _ctrl,
-                    builder: (_, v, __) => v.text.isEmpty
-                        ? const SizedBox.shrink()
-                        : IconButton(
-                            icon: Icon(
-                              Icons.clear_rounded,
-                              color: t.subtext,
-                              size: 18,
-                            ),
-                            onPressed: _ctrl.clear,
-                          ),
-                  ),
-                ),
-                onSubmitted: (q) {
-                  if (q.isNotEmpty) {
-                    widget.onSearch(q);
-                    Navigator.pop(context);
-                  }
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (_ctrl.text.isNotEmpty) {
-                    widget.onSearch(_ctrl.text);
-                    Navigator.pop(context);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: t.gold,
-                  foregroundColor: t.bg,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: Text(
-                  'SEARCH',
-                  style: GoogleFonts.cormorantGaramond(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 2,
-                    color: t.bg,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

@@ -37,8 +37,14 @@ class BackendProductService {
       ).replace(queryParameters: queryParams);
 
       final response = await ApiService.get(uri.toString());
-      final data = response['data'] as Map<String, dynamic>;
-      final productsList = data['products'] as List<dynamic>;
+      final dynamic responseData = response['data'] ?? response;
+      
+      List<dynamic> productsList = [];
+      if (responseData is Map && responseData['products'] != null) {
+        productsList = responseData['products'] as List<dynamic>;
+      } else if (responseData is List) {
+        productsList = responseData;
+      }
 
       return productsList
           .map((json) => Product.fromJson(json as Map<String, dynamic>))
@@ -81,12 +87,18 @@ class BackendProductService {
       if (category != null) queryParams['category'] = category;
 
       final uri = Uri.parse(
-        '${ApiConfig.productsEndpoint}/search',
+        ApiConfig.searchEndpoint,
       ).replace(queryParameters: queryParams);
 
       final response = await ApiService.get(uri.toString());
-      final data = response['data'] as Map<String, dynamic>;
-      final productsList = data['products'] as List<dynamic>;
+      final dynamic responseData = response['data'] ?? response;
+      
+      List<dynamic> productsList = [];
+      if (responseData is Map && responseData['products'] != null) {
+        productsList = responseData['products'] as List<dynamic>;
+      } else if (responseData is List) {
+        productsList = responseData;
+      }
 
       return productsList
           .map((json) => Product.fromJson(json as Map<String, dynamic>))

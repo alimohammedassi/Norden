@@ -1,30 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'screens/home_page.dart';
+
+import 'package:provider/provider.dart';
+
 import 'screens/onboarding_flow_page.dart';
 import 'screens/admin/admin_dashboard.dart';
 import 'services/backend_auth_service.dart';
+import 'services/cart_service.dart';
+import 'services/wishlist_service.dart';
 import 'services/token_manager.dart';
 import 'providers/season_provider.dart';
+import 'screens/main_screen.dart';
 import 'screens/location_setup_page.dart';
 import 'services/address_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await Firebase.initializeApp();
-  } catch (e) {
-    // If Firebase isn't configured yet, continue without crashing so the app can start
-    debugPrint('Firebase init error: $e');
-  }
 
   // Initialize backend auth service with timeout
   final authService = BackendAuthService();
   await authService.initWithTimeout();
 
-  runApp(SeasonScope(provider: SeasonProvider(), child: const NordenApp()));
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => CartService()..initialize()),
+        ChangeNotifierProvider(create: (_) => WishlistService()..initialize()),
+      ],
+      child: SeasonScope(
+        provider: SeasonProvider(),
+        child: const NordenApp(),
+      ),
+    ),
+  );
 }
 
 class NordenApp extends StatelessWidget {
@@ -140,6 +149,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
   void initState() {
     super.initState();
     _doInitialCheck();
+    // Hard failsafe: if after 5 seconds we are still not resolved, force navigation
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && !_initialCheckDone) {
+        setState(() => _initialCheckDone = true);
+      }
+    });
   }
 
   /// Fast-path: read persisted token + Firebase currentUser synchronously.
@@ -185,6 +200,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     final authService = BackendAuthService();
@@ -215,34 +232,23 @@ class _AuthWrapperState extends State<AuthWrapper> {
       return _buildDestination(_cachedUser!);
     }
 
-    // Otherwise listen to the live stream for fresh login/logout events
+    // If we timed out or the stream has a resolved currentUser, navigate immediately
+    // without waiting for a stream event (avoids permanent "Checking session..." screen).
     return StreamBuilder<Map<String, dynamic>?>(
       stream: authService.authStateChanges,
+      // Using currentUser as initialData means the builder runs immediately
+      // with ConnectionState.active (not .waiting) when data is already available.
+      initialData: authService.currentUser,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            backgroundColor: tokens.bg,
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: tokens.gold),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Checking session...',
-                    style: TextStyle(color: tokens.gold, fontSize: 16),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
+        // IMPORTANT: Do NOT show a loading screen for ConnectionState.waiting.
+        // The broadcast stream may have already emitted before this widget built,
+        // so it will never re-emit and we'd be stuck here forever.
+        // Instead, treat "waiting with no initialData" as "not logged in".
         if (snapshot.hasData && snapshot.data != null) {
           return _buildDestination(snapshot.data!);
         }
 
-        // Not logged in — show onboarding
+        // Not logged in (or timed out) — show onboarding
         return const OnboardingFlowPage();
       },
     );
@@ -266,7 +272,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           );
         }
         if (locationSnapshot.data == true) {
-          return const NordenHomePage();
+          return const MainScreen();
         } else {
           return const LocationSetupPage();
         }

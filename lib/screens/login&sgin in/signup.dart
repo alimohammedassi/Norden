@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 // Removed legacy API dependency; using Firebase auth only
 import '../../services/backend_auth_service.dart';
-import '../home_page.dart';
+import '../main_screen.dart';
 
 class NordenSignupPage extends StatefulWidget {
   const NordenSignupPage({super.key});
@@ -708,7 +708,7 @@ class _NordenSignupPageState extends State<NordenSignupPage>
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const NordenHomePage()),
+          MaterialPageRoute(builder: (context) => const MainScreen()),
         );
       }
     } catch (e) {
@@ -739,7 +739,7 @@ class _NordenSignupPageState extends State<NordenSignupPage>
       if (userData != null && mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const NordenHomePage()),
+          MaterialPageRoute(builder: (context) => const MainScreen()),
         );
       }
     } catch (e) {
@@ -799,7 +799,7 @@ class _NordenSignupPageState extends State<NordenSignupPage>
               Navigator.pop(context);
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const NordenHomePage()),
+                MaterialPageRoute(builder: (context) => const MainScreen()),
               );
             },
             style: ElevatedButton.styleFrom(

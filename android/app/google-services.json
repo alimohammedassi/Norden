@@ -1,39 +1,10 @@
 {
   "project_info": {
-    "project_number": "1092862428907",
+    "project_number": "202089577282",
     "project_id": "norden-e6024",
     "storage_bucket": "norden-e6024.firebasestorage.app"
   },
   "client": [
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:1092862428907:android:371bd1fbb55cdf782120ae",
-        "android_client_info": {
-          "package_name": "com.android.application"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "1092862428907-ksm2e531emltcboh4duepkpden5pun12.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCqFpftoCxSpXh8Ng-GGbdEQVqzyO_nqD8"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "1092862428907-ksm2e531emltcboh4duepkpden5pun12.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
     {
       "client_info": {
         "mobilesdk_app_id": "1:1092862428907:android:5c1dc1e0bb0f21d32120ae",
@@ -43,7 +14,7 @@
       },
       "oauth_client": [
         {
-          "client_id": "1092862428907-ksm2e531emltcboh4duepkpden5pun12.apps.googleusercontent.com",
+          "client_id": "202089577282-pe5qa8vci7o9i4q6vsjk7sk76bib694k.apps.googleusercontent.com",
           "client_type": 3
         }
       ],

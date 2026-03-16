@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/wishlist_item.dart';
-import 'product_service.dart';
+import '../models/product.dart';
+import 'backend_product_service.dart';
 
 /// Wishlist service using local storage (no backend)
 class WishlistService with ChangeNotifier {
@@ -48,7 +49,11 @@ class WishlistService with ChangeNotifier {
     if (_wishlistProductIds.contains(productId)) return;
     final now = DateTime.now();
     // Try to enrich wishlist entry with product info
-    final product = await ProductService().getProduct(productId);
+    Product? product;
+    try {
+      product = await BackendProductService().getProduct(productId);
+    } catch (_) {}
+    
     _wishlistItems.add(
       WishlistItem(
         id: 'w_$productId',
