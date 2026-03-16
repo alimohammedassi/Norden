@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import '../models/review.dart';
-import '../services/review_service.dart';
+import '../services/backend_review_service.dart';
 import '../services/backend_auth_service.dart';
 
 class AddReviewPage extends StatefulWidget {
@@ -22,7 +21,7 @@ class AddReviewPage extends StatefulWidget {
 
 class _AddReviewPageState extends State<AddReviewPage>
     with TickerProviderStateMixin {
-  final ReviewService _reviewService = ReviewService();
+  final BackendReviewService _reviewService = BackendReviewService();
   final BackendAuthService _authService = BackendAuthService();
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -65,27 +64,8 @@ class _AddReviewPageState extends State<AddReviewPage>
   }
 
   Future<void> _checkExistingReview() async {
-    if (_authService.currentUser == null) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      final existingReview = await _reviewService.getUserReviewForProduct(
-        _authService.currentUser!['uid'],
-        widget.productId,
-      );
-
-      if (existingReview != null) {
-        _titleController.text = existingReview.title;
-        _commentController.text = existingReview.comment;
-        _selectedRating = existingReview.rating;
-        _selectedImages = existingReview.images;
-      }
-    } catch (e) {
-      print('Error checking existing review: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
+    // Skip check on backend — handled server-side
+    setState(() => _isLoading = false);
   }
 
   Future<void> _pickImages() async {
@@ -122,16 +102,12 @@ class _AddReviewPageState extends State<AddReviewPage>
     if (_authService.currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please sign in to add a review'),
+          content: const Text('Please sign in to add a review'),
           backgroundColor: Colors.red,
           action: SnackBarAction(
             label: 'Sign In',
             textColor: Colors.white,
-            onPressed: () {
-              // Navigate to login page
-              Navigator.pop(context);
-              // You can add navigation to login page here
-            },
+            onPressed: () => Navigator.pop(context),
           ),
         ),
       );
@@ -140,7 +116,7 @@ class _AddReviewPageState extends State<AddReviewPage>
 
     if (_commentController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Please write a review comment'),
           backgroundColor: Colors.red,
         ),
@@ -151,45 +127,36 @@ class _AddReviewPageState extends State<AddReviewPage>
     setState(() => _isSubmitting = true);
 
     try {
-      final review = Review(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+      await _reviewService.createReview(
         productId: widget.productId,
-        userId: _authService.currentUser!['uid'],
-        userName: _authService.currentUser!['displayName'] ?? 'Anonymous',
-        userImageUrl: _authService.currentUser!['photoURL'] ?? '',
         rating: _selectedRating,
         title: _titleController.text.trim(),
         comment: _commentController.text.trim(),
-        images: _selectedImages, // TODO: Upload images to Firebase Storage
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        // images not uploaded to backend yet
       );
 
-      final success = await _reviewService.addReview(review);
-
-      if (success) {
-        HapticFeedback.lightImpact();
+      HapticFeedback.lightImpact();
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Review submitted successfully!'),
-            backgroundColor: const Color(0xFFD4AF37),
+            backgroundColor: Color(0xFFD4AF37),
           ),
         );
         Navigator.pop(context, true);
-      } else {
-        throw Exception('Failed to submit review');
       }
     } catch (e) {
-      print('Error submitting review: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error submitting review: ${e.toString()}'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error submitting review: ${e.toString().replaceAll('ApiException: ', '')}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } finally {
-      setState(() => _isSubmitting = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 

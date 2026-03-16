@@ -36,7 +36,9 @@ class Review {
       id: map['id'] ?? '',
       productId: map['productId'] ?? '',
       userId: map['userId'] ?? '',
-      userName: map['userName'] ?? '',
+      userName: (map['userName'] != null && map['userName'].toString().isNotEmpty)
+          ? map['userName']
+          : 'Verified Customer',
       userImageUrl: map['userImageUrl'] ?? '',
       rating: map['rating'] ?? 0,
       title: map['title'] ?? '',

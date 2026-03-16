@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/api_service.dart';
-import '../../services/auth_service.dart';
+import '../../services/backend_auth_service.dart';
+import '../../config/api_config.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -16,11 +17,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _phoneController = TextEditingController();
   bool _isLoading = false;
 
+  static const _gold = Color(0xFFD4AF37);
+  static const _goldDeep = Color(0xFFB8860B);
+
   @override
   void initState() {
     super.initState();
-    final user = AuthService().currentUser;
+    final user = BackendAuthService().currentUser;
     _nameController.text = user?['displayName'] ?? '';
+    _phoneController.text = user?['phoneNumber'] ?? '';
   }
 
   @override
@@ -36,34 +41,75 @@ class _EditProfilePageState extends State<EditProfilePage> {
     setState(() => _isLoading = true);
 
     try {
-      final user = AuthService().currentUser;
-      if (user != null) {
-        // TODO: Implement display name update for backend user data
-        // await user.updateDisplayName(_nameController.text.trim());
-        // await user.reload();
+      final authService = BackendAuthService();
+      final headers = await authService.getAuthHeaders();
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Profile updated successfully',
-                style: GoogleFonts.inter(color: Colors.white),
-              ),
-              backgroundColor: const Color(0xFF1A1A1A),
-            ),
-          );
-          Navigator.pop(context, true); // Return true to indicate success
+      if (headers == null) {
+        throw Exception('Not authenticated');
+      }
+
+      final body = <String, dynamic>{
+        'displayName': _nameController.text.trim(),
+      };
+      if (_phoneController.text.trim().isNotEmpty) {
+        body['phoneNumber'] = _phoneController.text.trim();
+      }
+
+      await ApiService.put(
+        ApiConfig.profileEndpoint,
+        headers: headers,
+        body: body,
+      );
+
+      // Update local user cache
+      final updatedUser = authService.currentUser;
+      if (updatedUser != null) {
+        updatedUser['displayName'] = _nameController.text.trim();
+        if (_phoneController.text.trim().isNotEmpty) {
+          updatedUser['phoneNumber'] = _phoneController.text.trim();
         }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.black, size: 18),
+                const SizedBox(width: 10),
+                Text(
+                  'Profile updated successfully',
+                  style: GoogleFonts.inter(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: _gold,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Failed to update profile',
+              'Failed to update profile: ${e.toString().replaceAll('ApiException: ', '').replaceAll('Exception: ', '')}',
               style: GoogleFonts.inter(color: Colors.white),
             ),
             backgroundColor: const Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -104,6 +150,45 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 16),
+                        // Avatar section
+                        Center(
+                          child: Stack(
+                            children: [
+                              Container(
+                                width: 90,
+                                height: 90,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF1F1B0A), Color(0xFF2A2308)],
+                                  ),
+                                  border: Border.all(color: _gold.withOpacity(0.4), width: 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _gold.withOpacity(0.2),
+                                      blurRadius: 20,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    (_nameController.text.isNotEmpty
+                                            ? _nameController.text[0]
+                                            : 'U')
+                                        .toUpperCase(),
+                                    style: GoogleFonts.cormorantGaramond(
+                                      fontSize: 36,
+                                      fontWeight: FontWeight.w600,
+                                      color: _gold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 32),
                         _buildTextField(
                           controller: _nameController,
                           label: 'Full Name',
@@ -142,10 +227,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new,
-              color: Color(0xFFD4AF37),
-            ),
+            icon: const Icon(Icons.arrow_back_ios_new, color: _gold),
             onPressed: () => Navigator.pop(context),
           ),
           Expanded(
@@ -156,7 +238,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 3,
-                color: const Color(0xFFD4AF37),
+                color: _gold,
               ),
             ),
           ),
@@ -179,9 +261,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
         Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFFD4AF37).withOpacity(0.7),
+            color: _gold.withOpacity(0.7),
             letterSpacing: 0.5,
           ),
         ),
@@ -190,36 +272,30 @@ class _EditProfilePageState extends State<EditProfilePage> {
           controller: controller,
           keyboardType: keyboardType,
           validator: validator,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            color: const Color(0xFFD4AF37),
-          ),
+          style: GoogleFonts.inter(fontSize: 16, color: _gold),
           decoration: InputDecoration(
-            prefixIcon: Icon(
-              icon,
-              color: const Color(0xFFD4AF37).withOpacity(0.5),
-            ),
+            prefixIcon: Icon(icon, color: _gold.withOpacity(0.5)),
             filled: true,
             fillColor: const Color(0xFF1A1A1A).withOpacity(0.6),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: const Color(0xFFD4AF37).withOpacity(0.3),
-              ),
+              borderSide: BorderSide(color: _gold.withOpacity(0.3)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: const Color(0xFFD4AF37).withOpacity(0.3),
-              ),
+              borderSide: BorderSide(color: _gold.withOpacity(0.3)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFD4AF37), width: 2),
+              borderSide: const BorderSide(color: _gold, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFFFF3B30)),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFFF3B30), width: 2),
             ),
           ),
         ),
@@ -236,15 +312,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           padding: EdgeInsets.zero,
         ),
         child: Ink(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFD4AF37), Color(0xFFB8860B)],
+            gradient: LinearGradient(
+              colors: _isLoading
+                  ? [_gold.withOpacity(0.4), _goldDeep.withOpacity(0.4)]
+                  : const [_gold, _goldDeep],
             ),
             borderRadius: BorderRadius.circular(16),
           ),

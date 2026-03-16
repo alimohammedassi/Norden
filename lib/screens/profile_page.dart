@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/backend_wishlist_service.dart';
+import '../services/backend_order_service.dart';
 import 'NordenIntroPage.dart';
 import 'profile/edit_profile_page.dart';
 import 'profile/wishlist_page.dart';
+import 'profile/order_history_page.dart';
 import 'profile/payment_methods_page.dart';
 import 'profile/addresses_page.dart';
 import 'profile/customer_service_page.dart';
@@ -28,7 +30,11 @@ class _ProfilePageState extends State<ProfilePage>
   late Animation<double> _pulseAnimation;
 
   final AuthService _authService = AuthService();
+  final BackendWishlistService _wishlistService = BackendWishlistService();
+  final BackendOrderService _orderService = BackendOrderService();
   Map<String, dynamic>? _currentUser;
+  int _wishlistCount = 0;
+  int _orderCount = 0;
 
   // Gold palette
   static const _gold = Color(0xFFD4AF37);
@@ -75,6 +81,23 @@ class _ProfilePageState extends State<ProfilePage>
     );
 
     _entryController.forward();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    if (_authService.isAnonymous) return;
+    try {
+      final results = await Future.wait([
+        _wishlistService.getWishlistCount().catchError((_) => 0),
+        _orderService.getOrders(limit: 1).then((o) => o.length).catchError((_) => 0),
+      ]);
+      if (mounted) {
+        setState(() {
+          _wishlistCount = results[0];
+          _orderCount = results[1];
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -416,9 +439,9 @@ class _ProfilePageState extends State<ProfilePage>
       ),
       child: Row(
         children: [
-          _statCell('0', 'Orders'),
+          _statCell(_orderCount.toString(), 'Orders'),
           _statDivider(),
-          _statCell('0', 'Wishlist'),
+          _statCell(_wishlistCount.toString(), 'Wishlist'),
           _statDivider(),
           _statCell('—', 'Points'),
         ],
@@ -590,7 +613,13 @@ class _ProfilePageState extends State<ProfilePage>
       _MenuEntry(
         icon: Icons.receipt_long_outlined,
         label: 'Order History',
-        onTap: () => _comingSoon('Order history'),
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const OrderHistoryPage()),
+          );
+          _loadStats();
+        },
       ),
       _MenuEntry(
         icon: Icons.credit_card_rounded,

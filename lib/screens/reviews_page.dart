@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/review.dart';
-import '../services/review_service.dart';
+import '../services/backend_review_service.dart';
 import '../services/backend_auth_service.dart';
 import 'add_review_page.dart';
+import 'NordenIntroPage.dart';
 
 class ReviewsPage extends StatefulWidget {
   final String productId;
@@ -22,7 +23,7 @@ class ReviewsPage extends StatefulWidget {
 
 class _ReviewsPageState extends State<ReviewsPage>
     with TickerProviderStateMixin {
-  final ReviewService _reviewService = ReviewService();
+  final BackendReviewService _reviewService = BackendReviewService();
   final BackendAuthService _authService = BackendAuthService();
   
   late AnimationController _controller;
@@ -33,7 +34,6 @@ class _ReviewsPageState extends State<ReviewsPage>
   List<Review> _reviews = [];
   bool _isLoading = true;
   bool _hasMoreReviews = true;
-  dynamic _lastReviewDoc;
   int _selectedFilter = 0; // 0: All, 1: 5 stars, 2: 4 stars, etc.
 
   @override
@@ -67,38 +67,37 @@ class _ReviewsPageState extends State<ReviewsPage>
     setState(() => _isLoading = true);
     
     try {
-      final rating = await _reviewService.getProductRating(widget.productId);
       final reviews = await _reviewService.getProductReviews(widget.productId);
       
-      setState(() {
-        _productRating = rating;
-        _reviews = reviews;
-        _isLoading = false;
-      });
+      // Build a local ProductRating from the fetched reviews
+      final dist = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+      double total = 0;
+      for (final r in reviews) {
+        total += r.rating;
+        dist[r.rating] = (dist[r.rating] ?? 0) + 1;
+      }
+      final rating = ProductRating(
+        productId: widget.productId,
+        averageRating: reviews.isNotEmpty ? total / reviews.length : 0,
+        totalReviews: reviews.length,
+        ratingDistribution: dist,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _productRating = rating;
+          _reviews = reviews;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _loadMoreReviews() async {
-    if (!_hasMoreReviews || _isLoading) return;
-
-    setState(() => _isLoading = true);
-    
-    try {
-      final moreReviews = await _reviewService.getProductReviews(
-        widget.productId,
-        startAfter: _lastReviewDoc,
-      );
-      
-      setState(() {
-        _reviews.addAll(moreReviews);
-        _hasMoreReviews = moreReviews.length >= 10;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
+    // Page-based pagination; re-load for now
+    await _loadData();
   }
 
   List<Review> _getFilteredReviews() {
@@ -180,24 +179,33 @@ class _ReviewsPageState extends State<ReviewsPage>
                   ],
                 ),
               ),
-              if (_authService.currentUser != null)
-                _buildIconButton(
-                  Icons.add_rounded,
-                  () async {
-                    final result = await Navigator.push(
+              _buildIconButton(
+                Icons.add_rounded,
+                () async {
+                  if (_authService.currentUser == null) {
+                    // Navigate to sign in
+                    await Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => AddReviewPage(
-                          productId: widget.productId,
-                          productName: widget.productName,
-                        ),
-                      ),
+                      MaterialPageRoute(builder: (_) => const NordenIntroPage()),
                     );
-                    if (result == true) {
-                      _loadData();
-                    }
-                  },
-                ),
+                    _loadData();
+                    return;
+                  }
+                  
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddReviewPage(
+                        productId: widget.productId,
+                        productName: widget.productName,
+                      ),
+                    ),
+                  );
+                  if (result == true) {
+                    _loadData();
+                  }
+                },
+              ),
             ],
           ),
         ),
@@ -707,15 +715,6 @@ class _ReviewsPageState extends State<ReviewsPage>
   }
 
   Future<void> _toggleHelpful(Review review) async {
-    if (_authService.currentUser == null) return;
-
-    final success = await _reviewService.markReviewHelpful(
-      review.id,
-      _authService.currentUser!['uid'],
-    );
-
-    if (success) {
-      _loadData(); // Refresh to show updated helpful count
-    }
+    // Helpful toggle not yet implemented in backend; show future TODO
   }
 }

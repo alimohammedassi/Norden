@@ -5,7 +5,7 @@ import 'package:slide_to_act/slide_to_act.dart';
 import 'dart:math' as math;
 import '../services/cart_service.dart';
 import '../services/wishlist_service.dart';
-import '../services/review_service.dart';
+import '../services/backend_review_service.dart';
 import '../models/review.dart';
 import 'reviews_page.dart';
 import '../providers/season_provider.dart';
@@ -37,7 +37,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
   ProductRating? _productRating;
 
   final WishlistService _wishlistService = WishlistService();
-  final ReviewService _reviewService = ReviewService();
+  final BackendReviewService _reviewService = BackendReviewService();
 
   @override
   void initState() {
@@ -113,10 +113,26 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
   Future<void> _loadProductRating() async {
     try {
-      final rating = await _reviewService.getProductRating(
-        widget.product['id'],
+      final reviews = await _reviewService.getProductReviews(
+        widget.product['id'].toString(),
       );
+      
       if (mounted) {
+        // Build a local ProductRating from the fetched reviews
+        final dist = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+        double total = 0;
+        for (final r in reviews) {
+          total += r.rating;
+          dist[r.rating] = (dist[r.rating] ?? 0) + 1;
+        }
+        
+        final rating = ProductRating(
+          productId: widget.product['id'].toString(),
+          averageRating: reviews.isNotEmpty ? total / reviews.length : 0,
+          totalReviews: reviews.length,
+          ratingDistribution: dist,
+        );
+
         setState(() {
           _productRating = rating;
         });

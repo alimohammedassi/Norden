@@ -2,6 +2,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../config/api_config.dart';
 import 'api_service.dart';
+import 'backend_auth_service.dart';
 
 class LocationService {
   static final LocationService _instance = LocationService._internal();
@@ -148,7 +149,7 @@ class LocationService {
     }
   }
 
-  /// Sync location data to backend
+  /// Sync location data to backend (authenticated)
   Future<void> syncLocationToBackend({
     required double latitude,
     required double longitude,
@@ -156,8 +157,12 @@ class LocationService {
     required String country,
   }) async {
     try {
+      final authService = BackendAuthService();
+      final headers = await authService.getAuthHeaders();
+
       final response = await ApiService.post(
         ApiConfig.locationEndpoint,
+        headers: headers,
         body: {
           'latitude': latitude,
           'longitude': longitude,

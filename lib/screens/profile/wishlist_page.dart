@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../services/wishlist_service.dart';
+import '../../services/backend_wishlist_service.dart';
 import '../../models/wishlist_item.dart';
 import '../product_details.dart';
 
@@ -13,15 +13,19 @@ class WishlistPage extends StatefulWidget {
 
 class _WishlistPageState extends State<WishlistPage>
     with TickerProviderStateMixin {
-  final WishlistService _wishlistService = WishlistService();
+  final BackendWishlistService _wishlistService = BackendWishlistService();
   late AnimationController _headerController;
   late Animation<double> _headerAnimation;
+
+  List<WishlistItem> _items = [];
+  bool _isLoading = true;
+  String? _error;
+
+  static const _gold = Color(0xFFD4AF37);
 
   @override
   void initState() {
     super.initState();
-    _wishlistService.loadWishlist();
-
     _headerController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -31,12 +35,72 @@ class _WishlistPageState extends State<WishlistPage>
       curve: Curves.easeOutCubic,
     );
     _headerController.forward();
+    _loadWishlist();
   }
 
   @override
   void dispose() {
     _headerController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadWishlist() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final items = await _wishlistService.getWishlist();
+      if (mounted) {
+        setState(() {
+          _items = items;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString().replaceAll('ApiException: ', '');
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _removeItem(WishlistItem item) async {
+    try {
+      await _wishlistService.removeFromWishlist(item.productId);
+      setState(() {
+        _items.removeWhere((i) => i.productId == item.productId);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Removed from wishlist',
+              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+            backgroundColor: const Color(0xFF1A1A1A),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to remove item', style: GoogleFonts.inter()),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -48,11 +112,11 @@ class _WishlistPageState extends State<WishlistPage>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF0A0A0A),
-              const Color(0xFF141414),
-              const Color(0xFF1A1A1A),
-              const Color(0xFF0F0F0F),
+            colors: const [
+              Color(0xFF0A0A0A),
+              Color(0xFF141414),
+              Color(0xFF1A1A1A),
+              Color(0xFF0F0F0F),
             ],
             stops: const [0.0, 0.3, 0.7, 1.0],
           ),
@@ -62,94 +126,13 @@ class _WishlistPageState extends State<WishlistPage>
             children: [
               _buildHeader(),
               Expanded(
-                child: StreamBuilder<List<WishlistItem>>(
-                  stream: _wishlistService.getWishlistProductsStream(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 60,
-                              height: 60,
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Color(0xFFD4AF37),
-                                ),
-                                strokeWidth: 3,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            Text(
-                              'Loading your favorites...',
-                              style: GoogleFonts.inter(
-                                color: Color(0xFFD4AF37).withOpacity(0.6),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Container(
-                          margin: const EdgeInsets.all(24),
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1A),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.red.withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.error_outline_rounded,
-                                color: Colors.red.withOpacity(0.8),
-                                size: 48,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Something went wrong',
-                                style: GoogleFonts.playfairDisplay(
-                                  color: const Color(0xFFD4AF37),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${snapshot.error}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: const Color(
-                                    0xFFD4AF37,
-                                  ).withOpacity(0.6),
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    final products = snapshot.data ?? [];
-
-                    if (products.isEmpty) {
-                      return _buildEmptyState();
-                    }
-
-                    return _buildProductGrid(products);
-                  },
-                ),
+                child: _isLoading
+                    ? _buildLoading()
+                    : _error != null
+                        ? _buildError()
+                        : _items.isEmpty
+                            ? _buildEmptyState()
+                            : _buildProductGrid(),
               ),
             ],
           ),
@@ -172,13 +155,10 @@ class _WishlistPageState extends State<WishlistPage>
           decoration: BoxDecoration(
             color: const Color(0xFF1A1A1A).withOpacity(0.6),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFFD4AF37).withOpacity(0.2),
-              width: 1,
-            ),
+            border: Border.all(color: _gold.withOpacity(0.2)),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFD4AF37).withOpacity(0.1),
+                color: _gold.withOpacity(0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 4),
               ),
@@ -190,12 +170,12 @@ class _WishlistPageState extends State<WishlistPage>
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD4AF37).withOpacity(0.1),
+                    color: _gold.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
                     Icons.arrow_back_ios_new,
-                    color: Color(0xFFD4AF37),
+                    color: _gold,
                     size: 18,
                   ),
                 ),
@@ -211,29 +191,38 @@ class _WishlistPageState extends State<WishlistPage>
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 2.5,
-                        color: const Color(0xFFD4AF37),
+                        color: _gold,
                       ),
                     ),
                     const SizedBox(height: 2),
-                    StreamBuilder<List<WishlistItem>>(
-                      stream: _wishlistService.getWishlistProductsStream(),
-                      builder: (context, snapshot) {
-                        final count = snapshot.data?.length ?? 0;
-                        return Text(
-                          '$count ${count == 1 ? 'item' : 'items'}',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 1,
-                            color: const Color(0xFFD4AF37).withOpacity(0.6),
-                          ),
-                        );
-                      },
+                    Text(
+                      '${_items.length} ${_items.length == 1 ? 'item' : 'items'}',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 1,
+                        color: _gold.withOpacity(0.6),
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 56),
+              // Refresh button
+              IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _gold.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.refresh_rounded,
+                    color: _gold.withOpacity(0.8),
+                    size: 18,
+                  ),
+                ),
+                onPressed: _loadWishlist,
+              ),
             ],
           ),
         ),
@@ -241,31 +230,114 @@ class _WishlistPageState extends State<WishlistPage>
     );
   }
 
-  Widget _buildProductGrid(List<WishlistItem> products) {
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      physics: const BouncingScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.68,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+  Widget _buildLoading() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 60,
+            height: 60,
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(_gold),
+              strokeWidth: 3,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Loading your favorites...',
+            style: GoogleFonts.inter(
+              color: _gold.withOpacity(0.6),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
-      itemCount: products.length,
-      itemBuilder: (context, index) {
-        return TweenAnimationBuilder<double>(
-          duration: Duration(milliseconds: 400 + (index * 50)),
-          tween: Tween(begin: 0.0, end: 1.0),
-          curve: Curves.easeOutCubic,
-          builder: (context, value, child) {
-            return Transform.scale(
-              scale: value,
-              child: Opacity(opacity: value, child: child),
-            );
-          },
-          child: _buildProductCard(products[index]),
-        );
-      },
+    );
+  }
+
+  Widget _buildError() {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.red.withOpacity(0.3)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline_rounded,
+                color: Colors.red.withOpacity(0.8), size: 48),
+            const SizedBox(height: 16),
+            Text(
+              'Could not load wishlist',
+              style: GoogleFonts.playfairDisplay(
+                color: _gold,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _error ?? 'Unknown error',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: _gold.withOpacity(0.6),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _loadWishlist,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _gold,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text('Retry', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductGrid() {
+    return RefreshIndicator(
+      color: _gold,
+      backgroundColor: const Color(0xFF1A1A1A),
+      onRefresh: _loadWishlist,
+      child: GridView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        physics: const BouncingScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.68,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        itemCount: _items.length,
+        itemBuilder: (context, index) {
+          return TweenAnimationBuilder<double>(
+            duration: Duration(milliseconds: 400 + (index * 50)),
+            tween: Tween(begin: 0.0, end: 1.0),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) {
+              return Transform.scale(
+                scale: value,
+                child: Opacity(opacity: value, child: child),
+              );
+            },
+            child: _buildProductCard(_items[index]),
+          );
+        },
+      ),
     );
   }
 
@@ -290,15 +362,15 @@ class _WishlistPageState extends State<WishlistPage>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFFD4AF37).withOpacity(0.2),
-                    const Color(0xFFD4AF37).withOpacity(0.0),
+                    _gold.withOpacity(0.2),
+                    _gold.withOpacity(0.0),
                   ],
                 ),
               ),
               child: Icon(
                 Icons.favorite_border_rounded,
                 size: 80,
-                color: const Color(0xFFD4AF37).withOpacity(0.5),
+                color: _gold.withOpacity(0.5),
               ),
             ),
             const SizedBox(height: 24),
@@ -307,7 +379,7 @@ class _WishlistPageState extends State<WishlistPage>
               style: GoogleFonts.playfairDisplay(
                 fontSize: 26,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFFD4AF37).withOpacity(0.8),
+                color: _gold.withOpacity(0.8),
               ),
             ),
             const SizedBox(height: 12),
@@ -319,27 +391,7 @@ class _WishlistPageState extends State<WishlistPage>
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   height: 1.5,
-                  color: const Color(0xFFD4AF37).withOpacity(0.5),
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD4AF37).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFD4AF37).withOpacity(0.3),
-                ),
-              ),
-              child: Text(
-                'START EXPLORING',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.5,
-                  color: const Color(0xFFD4AF37),
+                  color: _gold.withOpacity(0.5),
                 ),
               ),
             ),
@@ -350,8 +402,6 @@ class _WishlistPageState extends State<WishlistPage>
   }
 
   Widget _buildProductCard(WishlistItem product) {
-    final imageUrl = product.imageUrl;
-
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -359,20 +409,20 @@ class _WishlistPageState extends State<WishlistPage>
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) =>
                 ProductDetailsPage(
-                  product: {
-                    'id': product.productId,
-                    'name': product.productName,
-                    'price': product.price,
-                    'images': [product.imageUrl],
-                    'category': product.category,
-                    'colors': ['Black', 'White'],
-                    'sizes': ['S', 'M', 'L'],
-                  },
-                ),
+              product: {
+                'id': product.productId,
+                'name': product.productName,
+                'price': product.price,
+                'images': [product.imageUrl],
+                'category': product.category,
+                'colors': [],
+                'sizes': [],
+              },
+            ),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
+              return FadeTransition(opacity: animation, child: child);
+            },
           ),
         );
       },
@@ -387,13 +437,10 @@ class _WishlistPageState extends State<WishlistPage>
               const Color(0xFF141414).withOpacity(0.4),
             ],
           ),
-          border: Border.all(
-            color: const Color(0xFFD4AF37).withOpacity(0.2),
-            width: 1,
-          ),
+          border: Border.all(color: _gold.withOpacity(0.2)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF000000).withOpacity(0.3),
+              color: Colors.black.withOpacity(0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -406,79 +453,50 @@ class _WishlistPageState extends State<WishlistPage>
             children: [
               Stack(
                 children: [
-                  Hero(
-                    tag: 'wishlist_${product.productId}',
-                    child: AspectRatio(
-                      aspectRatio: 1,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0F0F0F),
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16),
-                          ),
-                        ),
-                        child: imageUrl.isNotEmpty
-                            ? Image.asset(
-                                imageUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return _buildImagePlaceholder();
-                                },
-                              )
-                            : _buildImagePlaceholder(),
-                      ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.4),
-                          Colors.transparent,
-                        ],
-                        stops: const [0.0, 0.3],
-                      ),
+                  AspectRatio(
+                    aspectRatio: 1,
+                    child: Container(
+                      color: const Color(0xFF0F0F0F),
+                      child: product.imageUrl.isNotEmpty
+                          ? Image.network(
+                              product.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _buildImagePlaceholder(),
+                              loadingBuilder: (_, child, progress) {
+                                if (progress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: progress.expectedTotalBytes != null
+                                        ? progress.cumulativeBytesLoaded /
+                                            progress.expectedTotalBytes!
+                                        : null,
+                                    color: _gold,
+                                    strokeWidth: 2,
+                                  ),
+                                );
+                              },
+                            )
+                          : _buildImagePlaceholder(),
                     ),
                   ),
                   Positioned(
                     top: 8,
                     right: 8,
                     child: GestureDetector(
-                      onTap: () {
-                        _wishlistService.removeFromWishlist(product.productId);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Removed from wishlist',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            backgroundColor: const Color(0xFF1A1A1A),
-                            duration: const Duration(seconds: 2),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        );
-                      },
+                      onTap: () => _removeItem(product),
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.7),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: const Color(0xFFD4AF37).withOpacity(0.3),
-                            width: 1,
+                            color: _gold.withOpacity(0.3),
                           ),
                         ),
                         child: const Icon(
                           Icons.favorite,
-                          color: Color(0xFFD4AF37),
+                          color: _gold,
                           size: 16,
                         ),
                       ),
@@ -492,15 +510,16 @@ class _WishlistPageState extends State<WishlistPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        product.category.toUpperCase(),
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.2,
-                          color: const Color(0xFFD4AF37).withOpacity(0.6),
+                      if (product.category.isNotEmpty)
+                        Text(
+                          product.category.toUpperCase(),
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.2,
+                            color: _gold.withOpacity(0.6),
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 4),
                       Text(
                         product.productName,
@@ -510,7 +529,7 @@ class _WishlistPageState extends State<WishlistPage>
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           height: 1.3,
-                          color: const Color(0xFFD4AF37),
+                          color: _gold,
                         ),
                       ),
                       const Spacer(),
@@ -521,7 +540,7 @@ class _WishlistPageState extends State<WishlistPage>
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFFD4AF37).withOpacity(0.8),
+                              color: _gold.withOpacity(0.8),
                             ),
                           ),
                           Text(
@@ -529,7 +548,7 @@ class _WishlistPageState extends State<WishlistPage>
                             style: GoogleFonts.playfairDisplay(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFFD4AF37),
+                              color: _gold,
                             ),
                           ),
                         ],
@@ -552,17 +571,13 @@ class _WishlistPageState extends State<WishlistPage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.image_outlined,
-              color: const Color(0xFFD4AF37).withOpacity(0.3),
-              size: 40,
-            ),
+            Icon(Icons.image_outlined, color: _gold.withOpacity(0.3), size: 40),
             const SizedBox(height: 8),
             Text(
               'No Image',
               style: GoogleFonts.inter(
                 fontSize: 11,
-                color: const Color(0xFFD4AF37).withOpacity(0.3),
+                color: _gold.withOpacity(0.3),
               ),
             ),
           ],
